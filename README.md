@@ -9,6 +9,16 @@
 
 ## Running
 
+### Prerequisites
+
+You will need to install the development versions of libbzip2 and libcairo.
+
+On Ubuntu 24.04:
+
+```
+sudo apt install -y libbz2-dev libcairo-dev
+```
+
 ### From Source Code
 
 First, install uv
