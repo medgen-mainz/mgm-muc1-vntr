@@ -7,6 +7,7 @@ import sys
 import typing
 from collections import Counter
 
+import cairo
 import pydantic
 import pysam
 from loguru import logger
@@ -31,6 +32,8 @@ class Config(pydantic.BaseModel):
     trim_flank: int
     #: Minimum support for consensus calls.
     min_support_consensus: int
+    #: Path to write pileup SVG file (optional).
+    pileup_svg_path: pathlib.Path | None = None
 
 
 def revcomp(seq: str) -> str:
@@ -223,6 +226,7 @@ def short_read_analysis(
         List of results found.
     """
     logger.info("Starting short-read analysis...")
+    logger.debug("Using configuration: {config}", config=config.model_dump_json(indent=2))
 
     rep_var_counter: dict[RepeatVariation, int] = {}
     context_infos: dict[str, list[ContextInformation]] = {}
@@ -367,6 +371,15 @@ def short_read_analysis(
     )
     logger.debug("Found {num_results} results with sufficient support", num_results=len(result))
 
+    # Generate SVG pileup if path is provided
+    if config.pileup_svg_path:
+        logger.info("Generating SVG pileup visualization...")
+        generate_pileup_svg(
+            short_read_results=result,
+            min_support_consensus=config.min_support_consensus,
+            output_path=config.pileup_svg_path,
+        )
+
     logger.info("Short-read analysis completed.")
     return result
 
@@ -494,3 +507,118 @@ def print_short_read_pileups(
                     + highlight_right(max_right, ctx.right_flank, cons_right),
                     file=file,
                 )
+
+
+def generate_pileup_svg(
+    *,
+    short_read_results: list[ShortReadResult],
+    min_support_consensus: int,
+    output_path: pathlib.Path,
+) -> None:
+    """Generate an SVG visualization of pileups for short read results.
+
+    Args:
+        short_read_results: List of short read results to visualize.
+        min_support_consensus: Minimum support threshold for consensus.
+        output_path: Path where SVG file should be written.
+    """
+    if not short_read_results:
+        logger.warning("No short read results to visualize")
+        return
+
+    # SVG dimensions and styling
+    font_size = 12
+    line_height = 16
+    margin = 20
+    char_width = 8  # Approximate character width for monospace font
+
+    # Calculate total height needed
+    total_height = margin
+    for result in short_read_results:
+        for group in result.flank_groups:
+            if group.count >= min_support_consensus:
+                # Height for header info (7 lines), gap, consensus line, and each read line
+                total_height += line_height * (7 + 1 + 1 + len(group.contexts)) + margin
+
+    # Calculate width needed (find longest line)
+    max_width = 0
+    for result in short_read_results:
+        for group in result.flank_groups:
+            if group.count >= min_support_consensus:
+                cons_left = group.consensus_left or group.longest_left
+                cons_right = group.consensus_right or group.longest_right
+                max_left = max([len(cons_left)] + [len(ctx.left_flank) for ctx in group.contexts])
+                max_right = max([len(cons_right)] + [len(ctx.right_flank) for ctx in group.contexts])
+
+                # Estimate line width: left + variant + right + extra text
+                line_width = max_left + len(result.repeat_variation.sequence) + max_right + 20
+                max_width = max(max_width, line_width)
+
+    svg_width = max_width * char_width + 2 * margin
+    svg_height = total_height + margin
+
+    # Create Cairo surface and context
+    surface = cairo.SVGSurface(str(output_path), svg_width, svg_height)
+    ctx = cairo.Context(surface)
+
+    # Set up font
+    ctx.select_font_face("Courier", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    ctx.set_font_size(font_size)
+
+    y_pos = margin + font_size
+
+    for result in short_read_results:
+        for group in result.flank_groups:
+            if group.count >= min_support_consensus:
+                rep_var = result.repeat_variation
+                cons_left = group.consensus_left or group.longest_left
+                cons_right = group.consensus_right or group.longest_right
+
+                # Header information as key/value pairs
+                ctx.set_source_rgb(0.2, 0.2, 0.2)  # Dark gray
+
+                # Extract filename from path
+                filename = os.path.basename(result.path_bam)
+
+                header_lines = [
+                    f"Filename: {filename}",
+                    f"Variant_Type: {rep_var.var_type.value}",
+                    f"Variant_Sequence: {rep_var.sequence}",
+                    f"Raw_Support: {result.raw_support}",
+                    f"Support: {result.support}",
+                    f"Group_Count: {group.count}",
+                    f"Example_Read: {group.example_read}",
+                ]
+
+                for header_line in header_lines:
+                    ctx.move_to(margin, y_pos)
+                    ctx.show_text(header_line)
+                    y_pos += line_height
+
+                y_pos += line_height // 2  # Small gap before alignment
+
+                # Calculate alignment parameters
+                max_left = max([len(cons_left)] + [len(ctx.left_flank) for ctx in group.contexts])
+                max_right = max([len(cons_right)] + [len(ctx.right_flank) for ctx in group.contexts])
+
+                # Consensus line
+                ctx.set_source_rgb(0.0, 0.0, 0.8)  # Blue for consensus
+                cons_text = f"CONS {cons_left.rjust(max_left)} [ {rep_var.sequence} ] {cons_right.ljust(max_right)}"
+                ctx.move_to(margin, y_pos)
+                ctx.show_text(cons_text)
+                y_pos += line_height
+
+                # Read lines
+                sorted_contexts = sorted(group.contexts, key=lambda c: (-len(c.left_flank), c.read_name))
+                for context in sorted_contexts:
+                    ctx.set_source_rgb(0.4, 0.4, 0.4)  # Gray for reads
+                    read_text = f"r    {context.left_flank.rjust(max_left)} [ {rep_var.sequence} ] {context.right_flank.ljust(max_right)}"
+                    ctx.move_to(margin, y_pos)
+                    ctx.show_text(read_text)
+                    y_pos += line_height
+
+                y_pos += margin // 2  # Extra space between groups
+
+    # Finish and save
+    surface.finish()
+    logger.info(f"SVG pileup visualization saved to {output_path}")

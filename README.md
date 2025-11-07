@@ -9,6 +9,16 @@
 
 ## Running
 
+### Prerequisites
+
+You will need to install the development versions of a number of libraries...
+
+On Ubuntu 24.04:
+
+```
+sudo apt install -y libbz2-dev libcairo-dev liblzma-dev
+```
+
 ### From Source Code
 
 First, install uv
@@ -35,6 +45,8 @@ You can disable logging alltogether by using `-q/--quiet`.
 Logging goes to stderr, so you can always redirect the output with `>`.
 
 Use `--print-pileups` to print the pileups and inspect whether there is sufficient suport for the environment left/right of variant.
+
+Use `--pileup-svg-path` to write out file with the short-read sequencing (SRS) pileups.
 
 ## Developer Notes
 

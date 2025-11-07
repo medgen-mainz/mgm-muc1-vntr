@@ -9,10 +9,13 @@ on:
 jobs:
   formatting:
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     steps:
+      - run: |
+            sudo apt-get install -y \
+                libbz2-dev \
+                libcairo-dev \
+                liblzma-dev
+
       - uses: actions/checkout@v5
 
       - name: Install uv
@@ -30,18 +33,17 @@ jobs:
 
   testing:
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     strategy:
       matrix:
         python-version:
           - '3.13'
           - '3.14'
-    needs: formatting
     steps:
       - run: |
-            sudo apt-get install -y libbz2-dev
+            sudo apt-get install -y \
+                libbz2-dev \
+                libcairo-dev \
+                liblzma-dev
 
       - uses: actions/checkout@v5
         with:
