@@ -10,6 +10,7 @@ from loguru import logger
 from mgm_muc1_vntr import __version__
 from mgm_muc1_vntr.srs_analysis import Config as SrsConfig
 from mgm_muc1_vntr.srs_analysis import (
+    generate_pileup_svg,
     print_short_read_pileups,
     print_short_read_result,
     print_short_read_result_header,
@@ -63,6 +64,7 @@ def run(
     verbose: Annotated[int, typer.Option("--verbose", "-v", count=True)] = 0,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Suppress output")] = False,
     print_pileups: Annotated[bool, typer.Option(help="Print pileups")] = False,
+    pileup_svg_path: Annotated[pathlib.Path | None, typer.Option(help="Path to write pileup visualization as SVG file")] = None,
 ) -> None:
     """Run SRS (and optional LRS) analysis."""
     setup_loguru(verbose=-1 if quiet else verbose)
@@ -78,6 +80,7 @@ def run(
             min_support_var=min_support_var,
             min_support_consensus=min_support_consensus,
             trim_flank=short_read_analysis_trim_flank,
+            pileup_svg_path=pileup_svg_path,
         )
     )
 
