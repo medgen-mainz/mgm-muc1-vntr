@@ -15,6 +15,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "biopython>=1.86",
     "loguru>=0.7.3",
     "pycairo>=1.28.0",
     "pydantic>=2.12.4",
