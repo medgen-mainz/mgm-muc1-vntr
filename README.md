@@ -11,12 +11,12 @@
 
 ### Prerequisites
 
-You will need to install the development versions of libbzip2 and libcairo.
+You will need to install the development versions of a number of libraries...
 
 On Ubuntu 24.04:
 
 ```
-sudo apt install -y libbz2-dev libcairo-dev
+sudo apt install -y libbz2-dev libcairo-dev liblzma-dev
 ```
 
 ### From Source Code
