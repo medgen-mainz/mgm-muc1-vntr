@@ -5,6 +5,7 @@ import pydantic
 
 type GenomeRelease = Literal["GRCh37", "GRCh38"]
 
+
 class VariantType(str, enum.Enum):
     """Enumeration for specifying variant type."""
 

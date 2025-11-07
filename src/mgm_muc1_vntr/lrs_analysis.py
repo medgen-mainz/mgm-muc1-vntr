@@ -1,5 +1,6 @@
 import os
 import pathlib
+
 import pydantic
 import pysam
 from Bio import Align
@@ -44,6 +45,7 @@ class LongReadResult(pydantic.BaseModel):
     #: IDs of alt reads.
     alt_read_names: list[str]
 
+
 ALIGNER = Align.PairwiseAligner(
     mode="global",
     match_score=2.0,
@@ -61,6 +63,7 @@ ALIGNER = Align.PairwiseAligner(
     open_right_deletion_score=0,
     extend_right_deletion_score=0,
 )
+
 
 def long_read_analysis(
     *,
@@ -194,4 +197,3 @@ def print_long_read_details(long_read_result: LongReadResult):
     )
     for read_name in long_read_result.alt_read_names:
         print(f"####  {read_name}")
-

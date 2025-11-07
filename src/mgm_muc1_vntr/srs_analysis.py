@@ -1,6 +1,5 @@
 """Code for SRS analysis of MUC1 VNTR."""
 
-import enum
 import os
 import pathlib
 import sys
@@ -135,7 +134,6 @@ class ShortReadResult(pydantic.BaseModel):
         else:
             ref_seq = self.repeat_variation.sequence
             return f"{left_flank}{ref_seq}{right_flank}"
-
 
 
 # Group by 4bp flanks, then build consensus sequences per group (min support 2 per column)
