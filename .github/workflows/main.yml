@@ -44,7 +44,6 @@ jobs:
         python-version:
           - '3.13'
           - '3.14'
-    needs: formatting
     steps:
       - run: |
             sudo apt-get install -y \
