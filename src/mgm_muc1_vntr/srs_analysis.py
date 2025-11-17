@@ -1,6 +1,5 @@
 """Code for SRS analysis of MUC1 VNTR."""
 
-import enum
 import os
 import pathlib
 import sys
@@ -12,7 +11,7 @@ import pydantic
 import pysam
 from loguru import logger
 
-from mgm_muc1_vntr.common import GenomeRelease
+from mgm_muc1_vntr.common import VNTR_INTERVALS, GenomeRelease, VariantType, revcomp
 
 
 class Config(pydantic.BaseModel):
@@ -34,21 +33,6 @@ class Config(pydantic.BaseModel):
     min_support_consensus: int
     #: Path to write pileup SVG file (optional).
     pileup_svg_path: pathlib.Path | None = None
-
-
-def revcomp(seq: str) -> str:
-    """Reverse complement a DNA sequence."""
-    complement = str.maketrans("ACGT", "TGCA")
-    return seq.translate(complement)[::-1]
-
-
-class VariantType(str, enum.Enum):
-    """Enumeration for specifying variant type."""
-
-    #: Is insertion of sequence into read.
-    INSERTION = "ins"
-    #: Is deletion from reference sequence.
-    DELETION = "del"
 
 
 class RepeatVariation(pydantic.BaseModel):
@@ -150,24 +134,6 @@ class ShortReadResult(pydantic.BaseModel):
         else:
             ref_seq = self.repeat_variation.sequence
             return f"{left_flank}{ref_seq}{right_flank}"
-
-
-class GenomeInterval(pydantic.BaseModel):
-    """Represent a genomic interval."""
-
-    #: Contig name.
-    contig: str
-    #: Start position (1-based).
-    start: int
-    #: End position (1-based, exclusive).
-    end: int
-
-
-#: VNTR interval locations
-VNTR_INTERVALS: dict[GenomeRelease, GenomeInterval] = {
-    "GRCh37": GenomeInterval(contig="1", start=155_161_171, end=155_161_634),
-    "GRCh38": GenomeInterval(contig="chr1", start=155_188_946, end=155_191_506),
-}
 
 
 # Group by 4bp flanks, then build consensus sequences per group (min support 2 per column)
@@ -409,7 +375,8 @@ def print_short_read_result(
                 [
                     os.path.basename(short_read_result.path_bam),
                     short_read_result.repeat_variation.var_type.value,
-                    short_read_result.repeat_variation.sequence,
+                    # Sequence is in transcript orientation (revcomp).
+                    revcomp(short_read_result.repeat_variation.sequence),
                     short_read_result.raw_support,
                     short_read_result.support,
                     short_read_result.path_bam,

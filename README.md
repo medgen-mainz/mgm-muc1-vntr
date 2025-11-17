@@ -48,6 +48,10 @@ Use `--print-pileups` to print the pileups and inspect whether there is sufficie
 
 Use `--pileup-svg-path` to write out file with the short-read sequencing (SRS) pileups.
 
+You can enable the long-read sequencing analysis mode by passing `--long-read-bam` (LRS BAM/CRAM file) and `--long-read-reference` (reference used in LRS analysis).
+
+Note that you may have to use `--short-read-release` and `--long-read-release` to select the appropriate genome release for short and long read analysis.
+
 ## Developer Notes
 
 First, install `uv`
