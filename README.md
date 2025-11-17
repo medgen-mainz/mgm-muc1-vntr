@@ -1,6 +1,6 @@
-[![CI](https://github.com/medgen-mainz/mgm-muc1-vntr/actions/workflows/main.yml/badge.svg)](https://github.com/medgen-mainz/mgm-muc1-vntr/actions/workflows/main.yml)
+[![CI](https://github.com/medgen-mainz/mainz-muc1-vntr/actions/workflows/main.yml/badge.svg)](https://github.com/medgen-mainz/mainz-muc1-vntr/actions/workflows/main.yml)
 
-# MGM-MUC1-VNTR
+# Mainz-MUC1-VNTR
 
 
 - Python: 3.13+
@@ -35,7 +35,7 @@ Also, your BAM file must have a `.bai` index.
 Then:
 
 ```
-uv run mgm-muc1-vntr run \
+uv run mainz-muc1-vntr run \
     --short-read-reference path/to/hs37d5.fa \
     --short-read-bam path/to/Sample.bam
 ```
@@ -67,7 +67,7 @@ First, install `uv`
 Clone and run with uv:
 
 ```
-# git clone git@github.com:medgen-mainz/mgm-muc1-vntr.git
-# cd mgm-muc1-vntr
-# uv run mgm-muc1-vntr --help
+# git clone git@github.com:medgen-mainz/mainz-muc1-vntr.git
+# cd mainz-muc1-vntr
+# uv run mainz-muc1-vntr --help
 ```
