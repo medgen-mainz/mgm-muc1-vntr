@@ -7,16 +7,16 @@ from typing import Annotated, Literal
 import typer
 from loguru import logger
 
-from mainz_muc1_vntr import __version__
-from mainz_muc1_vntr.lrs_analysis import Config as LrsConfig
-from mainz_muc1_vntr.lrs_analysis import (
+from mgm_muc1_vntr import __version__
+from mgm_muc1_vntr.lrs_analysis import Config as LrsConfig
+from mgm_muc1_vntr.lrs_analysis import (
     long_read_analysis,
     print_long_read_details,
     print_long_read_result,
     print_long_read_result_header,
 )
-from mainz_muc1_vntr.srs_analysis import Config as SrsConfig
-from mainz_muc1_vntr.srs_analysis import (
+from mgm_muc1_vntr.srs_analysis import Config as SrsConfig
+from mgm_muc1_vntr.srs_analysis import (
     print_short_read_pileups,
     print_short_read_result,
     print_short_read_result_header,
@@ -47,7 +47,7 @@ def setup_loguru(verbose: int = 0):
 
 
 app = typer.Typer(
-    name="mainz-muc1-vntr",
+    name="mgm-muc1-vntr",
     help="SRS and LRS analysis for MUC1 VNTR",
     add_completion=False,
     no_args_is_help=True,
@@ -89,7 +89,7 @@ def run(
     """Run SRS (and optional LRS) analysis."""
     setup_loguru(verbose=-1 if quiet else verbose)
 
-    logger.info("Mainz-MUC1-VNTR startup")
+    logger.info("MGM-MUC1-VNTR startup")
 
     # Validate long read parameters if provided
     if long_read_bam and not long_read_reference:
@@ -161,7 +161,7 @@ def run(
 
 @app.command()
 def version() -> None:
-    """Show the version of mainz-muc1-vntr."""
+    """Show the version of mgm-muc1-vntr."""
     typer.echo(__version__)
 
 

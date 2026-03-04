@@ -11,7 +11,7 @@ import pydantic
 import pysam
 from loguru import logger
 
-from mainz_muc1_vntr.common import VNTR_INTERVALS, GenomeRelease, VariantType, revcomp
+from mgm_muc1_vntr.common import VNTR_INTERVALS, GenomeRelease, VariantType, revcomp
 
 
 class Config(pydantic.BaseModel):

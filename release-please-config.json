@@ -6,9 +6,9 @@
   "prerelease": false,
   "packages": {
     ".": {
-      "package-name": "mainz_muc1_vntr",
+      "package-name": "mgm_muc1_vntr",
       "release-type": "python",
-      "version-file": "src/mainz_muc1_vntr/version.py",
+      "version-file": "src/mgm_muc1_vntr/version.py",
       "component": ""
     }
   }

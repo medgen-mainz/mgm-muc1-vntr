@@ -1,4 +1,4 @@
-* mainz_muc1_vntr version:
+* mgm_muc1_vntr version:
 * Python version:
 * Operating System:
 

@@ -24,21 +24,21 @@ dependencies = [
 ]
 description = "MUC1 VNTR analysis for short- and long-read sequencing data"
 keywords = []
-name = "mainz_muc1_vntr"
+name = "mgm_muc1_vntr"
 version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.13"
 
 [project.scripts]
-mainz-muc1-vntr = "mainz_muc1_vntr.__main__:main"
+mgm-muc1-vntr = "mgm_muc1_vntr.__main__:main"
 
 [project.urls]
-Documentation = "https://github.com/medgen-mainz/mainz_muc1_vntr"
-Issues = "https://github.com/medgen-mainz/mainz_muc1_vntr/issues"
-Source = "https://github.com/medgen-mainz/mainz_muc1_vntr"
+Documentation = "https://github.com/medgen-mainz/mgm_muc1_vntr"
+Issues = "https://github.com/medgen-mainz/mgm_muc1_vntr/issues"
+Source = "https://github.com/medgen-mainz/mgm_muc1_vntr"
 
 [tool.hatch.version]
-path = "mainz_muc1_vntr/version.py"
+path = "mgm_muc1_vntr/version.py"
 
 [dependency-groups]
 dev = [
@@ -81,7 +81,7 @@ typecheck = [
 ]
 
 [tool.pyright]
-include = ["src/mainz_muc1_vntr", "examples"]
+include = ["src/mgm_muc1_vntr", "examples"]
 exclude = [
     "**/node_modules",
     "**/__pycache__",
@@ -124,7 +124,7 @@ line-length = 120
 addopts = "--doctest-modules"
 
 [tool.ruff.lint.isort]
-known-first-party = ["src/mainz_muc1_vntr"]
+known-first-party = ["src/mgm_muc1_vntr"]
 
 [tool.hatch.envs.tests]
 installer = "uv"
@@ -133,8 +133,8 @@ feature = [
 ]
 
 [tool.hatch.envs.tests.scripts]
-run = "pytest --cov=src/mainz_muc1_vntr --cov-report=term-missing --durations 5 -s tests/ src/mainz_muc1_vntr {args:tests}"
-run-snapshot = "pytest --cov=src/mainz_muc1_vntr --cov-report=term-missing --durations 5 -s --snapshot-update tests/ src/mainz_muc1_vntr {args:tests}"
+run = "pytest --cov=src/mgm_muc1_vntr --cov-report=term-missing --durations 5 -s tests/ src/mgm_muc1_vntr {args:tests}"
+run-snapshot = "pytest --cov=src/mgm_muc1_vntr --cov-report=term-missing --durations 5 -s --snapshot-update tests/ src/mgm_muc1_vntr {args:tests}"
 
 [tool.hatch.envs.docs]
 installer = "uv"
@@ -157,10 +157,10 @@ feature = [
 run = "hatch build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mainz_muc1_vntr"]
+packages = ["src/mgm_muc1_vntr"]
 
 [tool.hatch.build.targets.sdist]
-packages = ["src/mainz_muc1_vntr"]
+packages = ["src/mgm_muc1_vntr"]
 exclude = [
   "/.editorconfig",
   "/Makefile",

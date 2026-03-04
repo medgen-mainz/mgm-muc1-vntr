@@ -6,8 +6,8 @@ import pysam
 from Bio import Align
 from loguru import logger
 
-from mainz_muc1_vntr.common import VNTR_INTERVALS, GenomeRelease, VariantType, revcomp
-from mainz_muc1_vntr.srs_analysis import ShortReadResult
+from mgm_muc1_vntr.common import VNTR_INTERVALS, GenomeRelease, VariantType, revcomp
+from mgm_muc1_vntr.srs_analysis import ShortReadResult
 
 
 class Config(pydantic.BaseModel):
