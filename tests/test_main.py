@@ -127,11 +127,11 @@ def test_short_and_long_read_run(tmp_path, ont_bams, extra):
     assert ("####  " in result.output) is bool(extra)
 
 
-def test_long_read_arguments_are_skipped_when_short_read_finds_nothing(tmp_path):
+def test_long_read_skip_names_the_missing_short_read_results(tmp_path):
     """Both LRS paths are read before any file is opened, so they need not exist.
 
-    The warning names the wrong reason: nothing cleared `min_support_var`, but the branch
-    order reports a missing BAM or reference instead. Pinned as-is.
+    Both LRS arguments are present here, so the only reason to skip the analysis is the
+    empty SRS result, and the warning has to say so rather than blame the arguments.
     """
     result = runner.invoke(
         app,
@@ -143,7 +143,7 @@ def test_long_read_arguments_are_skipped_when_short_read_finds_nothing(tmp_path)
         ),
     )
     assert result.exit_code == 0, result.output
-    assert "both BAM and reference files are required" in result.output
+    assert "no short read results found" in result.output
 
 
 def test_no_results_and_no_long_read_arguments(tmp_path):
