@@ -147,8 +147,7 @@ def build_left_consensus(config: Config, left_flanks: list[str]) -> str:
         for s in left_flanks:
             if len(s) >= k:
                 bases.append(s[-k])
-        if not bases:
-            break
+        assert bases, "the longest flank contributes a base for every k <= max_len"
         cnt = Counter(bases)
         base, freq = cnt.most_common(1)[0]
         if freq >= config.min_support_consensus:
@@ -168,8 +167,7 @@ def build_right_consensus(config: Config, right_flanks: list[str]) -> str:
         for s in right_flanks:
             if len(s) > k:
                 bases.append(s[k])
-        if not bases:
-            break
+        assert bases, "the longest flank contributes a base for every k <= max_len"
         cnt = Counter(bases)
         base, freq = cnt.most_common(1)[0]
         if freq >= config.min_support_consensus:

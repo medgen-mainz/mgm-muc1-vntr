@@ -178,6 +178,17 @@ line-length = 120
 [tool.pytest.ini_options]
 addopts = "--doctest-modules"
 
+# 100% is a ratchet, not an aspiration: without `fail_under` the next PR quietly erodes it.
+# The suite reaches it with no `# pragma: no cover` anywhere, and the three statements that
+# used to make that impossible are now `assert`s stating the invariant that made them
+# unreachable (#23).
+#
+# Statement coverage, deliberately. `--cov-branch` sits at 98%, the partial arcs being mostly
+# loop exits, and closing the rest needs a synthetic SRS BAM with chosen CIGARs. Worth doing
+# separately, not as a condition of this gate.
+[tool.coverage.report]
+fail_under = 100
+
 [tool.ruff.lint.isort]
 known-first-party = ["src/mgm_muc1_vntr"]
 

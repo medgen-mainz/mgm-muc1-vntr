@@ -89,17 +89,18 @@ def long_read_analysis(
     alt_marker = short_read_result.alt_sequence(trim_flank=config.trim_flank)
 
     # Build consensus variant allele sequence for alignment
-    group = short_read_result.flank_groups[0] if short_read_result.flank_groups else None
-    if group:
-        cons_left = group.consensus_left or group.longest_left
-        cons_right = group.consensus_right or group.longest_right
-        rep_var = short_read_result.repeat_variation
-        if rep_var.var_type == VariantType.INSERTION:
-            variant_consensus = cons_left + rep_var.sequence + cons_right
-        else:
-            variant_consensus = cons_left + cons_right
+    # `ref_sequence()` above already indexes `flank_groups[0]`, so an empty list has raised
+    # IndexError by this point. The assert states that precondition rather than pretending
+    # to handle it.
+    assert short_read_result.flank_groups, "ref_sequence() above requires a flank group"
+    group = short_read_result.flank_groups[0]
+    cons_left = group.consensus_left or group.longest_left
+    cons_right = group.consensus_right or group.longest_right
+    rep_var = short_read_result.repeat_variation
+    if rep_var.var_type == VariantType.INSERTION:
+        variant_consensus = cons_left + rep_var.sequence + cons_right
     else:
-        variant_consensus = alt_marker
+        variant_consensus = cons_left + cons_right
 
     if debug:
         print(str(config.input_bam))
