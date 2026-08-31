@@ -14,6 +14,31 @@ COPY src ./src
 
 RUN pixi install --locked -e prod
 
+# Strip what a runtime image cannot use. Measured on the first published image: this is
+# ~95 MB of a 572 MB total, none of it reachable from `mgm-muc1-vntr`.
+#
+#   include/       C headers, for building against the libraries, not running them
+#   conda-meta/    pixi and conda bookkeeping; nothing re-solves inside the image
+#   *.a            static archives, the shared objects are what get loaded
+#   share/gir-1.0  GObject introspection, needed by PyGObject bindings, not by pycairo
+#   share/locale   translations; the tool is English only
+#   share/terminfo the base image supplies its own
+#   share/{man,doc,info}
+#
+# __pycache__ is deliberately kept. Deleting it saves a further 30 MB but the interpreter
+# then recompiles the imported half of numpy, pysam and biopython on every container start,
+# and these containers are one-shot, so the cost is paid on every single run.
+ARG PREFIX=/app/.pixi/envs/prod
+RUN find "$PREFIX" -name '*.a' -type f -delete \
+    && rm -rf "$PREFIX/include" \
+              "$PREFIX/conda-meta" \
+              "$PREFIX/share/gir-1.0" \
+              "$PREFIX/share/locale" \
+              "$PREFIX/share/terminfo" \
+              "$PREFIX/share/man" \
+              "$PREFIX/share/doc" \
+              "$PREFIX/share/info"
+
 # Runtime stage. Conda prefixes are not relocatable, so the environment has to land on the
 # same path it was built at. The source tree comes along because pyproject.toml declares the
 # project as an *editable* pypi dependency, which leaves a .pth in site-packages pointing at
