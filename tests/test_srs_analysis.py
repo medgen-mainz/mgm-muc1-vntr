@@ -174,3 +174,25 @@ def test_generate_pileup_svg_from_hand_built_results(make_short_read_result, tmp
     # The group below support must contribute nothing, so the two renders are identical.
     assert with_both.read_bytes() == only_supported.read_bytes()
     assert below_support.example_read not in with_both.read_text()
+
+
+def test_generate_pileup_svg_fits_a_long_header_inside_the_canvas(make_short_read_result, tmp_path):
+    """A read name longer than the widest alignment line must still fit the canvas.
+
+    `Example_Read` is the only line whose length is not bounded by the flanks, so it is
+    the one that used to be laid out past the declared `width` and clipped there.
+    """
+    result = make_short_read_result()
+    result.flank_groups[0].example_read = "R" * 400
+
+    output_path = tmp_path / "pileup.svg"
+    generate_pileup_svg(short_read_results=[result], min_support_consensus=2, output_path=output_path)
+
+    root = ElementTree.parse(output_path).getroot()
+    width = float(root.attrib["width"])
+    overflowing = [
+        text.text
+        for text in root.iter("{http://www.w3.org/2000/svg}text")
+        if float(text.attrib["x"]) + float(text.attrib["textLength"]) > width
+    ]
+    assert overflowing == []

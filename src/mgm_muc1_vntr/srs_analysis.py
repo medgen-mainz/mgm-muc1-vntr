@@ -511,7 +511,6 @@ def generate_pileup_svg(
     font_size = 12
     line_height = 16
     margin = 20
-    char_width = 8  # Approximate character width for monospace font
 
     # Calculate total height needed
     total_height = margin
@@ -521,25 +520,11 @@ def generate_pileup_svg(
                 # Height for header info (7 lines), gap, consensus line, and each read line
                 total_height += line_height * (7 + 1 + 1 + len(group.contexts)) + margin
 
-    # Calculate width needed (find longest line)
-    max_width = 0
-    for result in short_read_results:
-        for group in result.flank_groups:
-            if group.count >= min_support_consensus:
-                cons_left = group.consensus_left or group.longest_left
-                cons_right = group.consensus_right or group.longest_right
-                max_left = max([len(cons_left)] + [len(ctx.left_flank) for ctx in group.contexts])
-                max_right = max([len(cons_right)] + [len(ctx.right_flank) for ctx in group.contexts])
-
-                # Estimate line width: left + variant + right + extra text
-                line_width = max_left + len(result.repeat_variation.sequence) + max_right + 20
-                max_width = max(max_width, line_width)
-
-    svg_width = max_width * char_width + 2 * margin
     svg_height = total_height + margin
 
     advance = font_size * PILEUP_ADVANCE_EM
     lines: list[str] = []
+    max_chars = 0
 
     def emit(text: str, y: float, fill: str) -> None:
         """Append one line of monospace text on the character grid.
@@ -548,7 +533,13 @@ def generate_pileup_svg(
         ``rjust``/``ljust``, and SVG collapses leading and repeated spaces without it.
         ``textLength`` pins the line to an exact multiple of the advance width so the
         columns survive a viewer substituting a font whose advance is not 0.6 em.
+
+        The canvas width is taken from the longest line seen here rather than estimated
+        ahead of the loop, which is what keeps a header longer than any alignment line
+        inside the viewBox (#35).
         """
+        nonlocal max_chars
+        max_chars = max(max_chars, len(text))
         lines.append(
             f'<text x="{margin}" y="{y:g}" fill="{fill}" '
             f'textLength="{len(text) * advance:g}" lengthAdjust="spacing" '
@@ -603,6 +594,8 @@ def generate_pileup_svg(
                     y_pos += line_height
 
                 y_pos += margin // 2  # Extra space between groups
+
+    svg_width = max_chars * advance + 2 * margin
 
     body = "\n".join(lines)
     output_path.write_text(
