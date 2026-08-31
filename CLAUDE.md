@@ -101,20 +101,27 @@ All tooling runs through the Makefile:
 | `make test` | pytest with coverage |
 | `make test-snapshot` | same suite, updating snapshots |
 | `make build` | sdist and wheel |
-| `make lock` | upgrade `uv.lock` |
+| `make lock` | upgrade `pixi.lock` |
 
 Two invariants worth knowing before you touch the build:
 
-- **`uv.lock` is authoritative.** Every tool runs via `uv run --locked`, which fails
+- **`pixi.lock` is authoritative.** Every tool runs via `pixi run --locked`, which fails
   on a lockfile stale against `pyproject.toml` rather than silently re-resolving.
   Do not add a second environment manager on top; that is the bug this replaced.
+  pixi took over from uv in #17 and `uv.lock` is deleted, not kept in parallel.
 - **`src/mgm_muc1_vntr/version.py` is the only place a version literal lives.**
   `pyproject.toml` declares `dynamic = ["version"]` and derives it. Never add a
   static `version` to `[project]`.
 
-Building the C extensions needs the system libraries they link against: bzip2,
-cairo and lzma. Checkouts need `git lfs` installed to get the BAM fixtures; without
-it you get pointer files and any test that opens one fails.
+There are no system libraries to install. pycairo comes from conda-forge as a prebuilt
+binary and pysam from a PyPI wheel with htslib bundled in, so the bzip2, cairo and lzma
+development packages a checkout used to need are gone. If you find yourself adding an
+`apt-get install` to make something build, that is a sign the dependency belongs on the
+conda side of `pyproject.toml` instead. Checkouts do still need `git lfs` installed to get
+the BAM fixtures; without it you get pointer files and any test that opens one fails.
+
+Python 3.14 is permitted by `requires-python` but not covered by CI; the reason is a
+resolver constraint on linux-64 documented at length in `pyproject.toml`.
 
 ## Commits and releases
 
