@@ -50,12 +50,12 @@ def test_no_arguments_shows_help():
 
 
 @pytest.mark.parametrize("flag", ["-q", "-v", "-vv"])
-def test_verbosity_flags(tmp_path, flag):
-    result = runner.invoke(app, srs_args(output_dir=tmp_path) + [flag])
+def test_verbosity_flags(flag):
+    result = runner.invoke(app, srs_args() + [flag])
     assert result.exit_code == 0, result.output
 
 
-def test_short_read_csv_row_reaches_the_runner(tmp_path):
+def test_short_read_csv_row_reaches_the_runner():
     """The CSV row lands in `result.output`, so whatever holds stdout at call time gets it.
 
     `print_short_read_result` resolves `sys.stdout` per call. Bound at import time
@@ -63,7 +63,7 @@ def test_short_read_csv_row_reaches_the_runner(tmp_path):
     later could intercept it: not `CliRunner`, not `contextlib.redirect_stdout`, not
     `capsys`, not `capfd`.
     """
-    result = runner.invoke(app, srs_args(output_dir=tmp_path))
+    result = runner.invoke(app, srs_args())
     assert result.exit_code == 0, result.output
     csv_rows = [line for line in result.output.splitlines() if line.startswith("NA24149_MUC1_SRS.bam,")]
     assert len(csv_rows) == 1
@@ -79,9 +79,9 @@ def test_short_read_csv_row_reaches_the_runner(tmp_path):
 
 
 @pytest.mark.parametrize("flag", [[], ["--print-pileups"]])
-def test_print_pileups_flag_controls_the_pileup_output(tmp_path, flag):
+def test_print_pileups_flag_controls_the_pileup_output(flag):
     """The flag decides whether the pileup reaches stdout; one read line per grouped read."""
-    result = runner.invoke(app, srs_args(output_dir=tmp_path) + flag)
+    result = runner.invoke(app, srs_args() + flag)
     assert result.exit_code == 0, result.output
     lines = result.output.splitlines()
     assert sum(line.startswith("## CONS") for line in lines) == (1 if flag else 0)
@@ -90,7 +90,7 @@ def test_print_pileups_flag_controls_the_pileup_output(tmp_path, flag):
 
 def test_pileup_svg_option_writes_the_file(tmp_path):
     svg_path = tmp_path / "pileup.svg"
-    result = runner.invoke(app, srs_args(output_dir=tmp_path, pileup_svg_path=svg_path))
+    result = runner.invoke(app, srs_args(pileup_svg_path=svg_path))
     assert result.exit_code == 0, result.output
     assert svg_path.stat().st_size > 0
 
@@ -108,12 +108,11 @@ def test_long_read_reference_without_bam_exits_one():
 
 
 @pytest.mark.parametrize("extra", [[], ["--print-details"]])
-def test_short_and_long_read_run(tmp_path, ont_bams, extra):
+def test_short_and_long_read_run(ont_bams, extra):
     """The full path: SRS on GRCh37, then LRS on the GRCh38 ONT fixture."""
     result = runner.invoke(
         app,
         srs_args(
-            output_dir=tmp_path,
             long_read_bam=ont_bams["GRCh38"],
             long_read_reference=GRCH38_REFERENCE,
             long_read_release="GRCh38",
@@ -127,7 +126,7 @@ def test_short_and_long_read_run(tmp_path, ont_bams, extra):
     assert ("####  " in result.output) is bool(extra)
 
 
-def test_long_read_skip_names_the_missing_short_read_results(tmp_path):
+def test_long_read_skip_names_the_missing_short_read_results():
     """Both LRS paths are read before any file is opened, so they need not exist.
 
     Both LRS arguments are present here, so the only reason to skip the analysis is the
@@ -136,7 +135,6 @@ def test_long_read_skip_names_the_missing_short_read_results(tmp_path):
     result = runner.invoke(
         app,
         srs_args(
-            output_dir=tmp_path,
             min_support_var=99999,
             long_read_bam="/nonexistent.bam",
             long_read_reference="/nonexistent.fa",
@@ -146,8 +144,8 @@ def test_long_read_skip_names_the_missing_short_read_results(tmp_path):
     assert "no short read results found" in result.output
 
 
-def test_no_results_and_no_long_read_arguments(tmp_path):
-    result = runner.invoke(app, srs_args(output_dir=tmp_path, min_support_var=99999))
+def test_no_results_and_no_long_read_arguments():
+    result = runner.invoke(app, srs_args(min_support_var=99999))
     assert result.exit_code == 0, result.output
     assert "no short read results found" in result.output
 

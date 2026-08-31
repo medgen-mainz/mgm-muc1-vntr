@@ -40,7 +40,6 @@ SUPPORT_THRESHOLD_TABLE = [
 
 
 def make_config(
-    output_dir: pathlib.Path,
     *,
     min_support_var: int = DEFAULT_MIN_SUPPORT_VAR,
     pileup_svg_path: pathlib.Path | None = None,
@@ -50,7 +49,6 @@ def make_config(
         input_bam=BAM_PATH,
         genome_release="GRCh37",
         reference_genome=REFERENCE_PATH,
-        output_dir=output_dir,
         min_support_var=min_support_var,
         trim_flank=DEFAULT_TRIM_FLANK,
         min_support_consensus=DEFAULT_MIN_SUPPORT_CONSENSUS,
@@ -59,9 +57,9 @@ def make_config(
 
 
 @pytest.fixture
-def results(tmp_path: pathlib.Path) -> list[ShortReadResult]:
+def results() -> list[ShortReadResult]:
     """Run the analysis once at the CLI defaults and hand back the results."""
-    return short_read_analysis(config=make_config(tmp_path))
+    return short_read_analysis(config=make_config())
 
 
 def test_support_accounting_is_consistent(results: list[ShortReadResult]) -> None:
@@ -115,7 +113,6 @@ def test_no_frameshifting_call_at_the_default_threshold(results: list[ShortReadR
 
 @pytest.mark.parametrize(("min_support_var", "expected_calls", "expected_frameshifting"), SUPPORT_THRESHOLD_TABLE)
 def test_call_counts_per_support_threshold(
-    tmp_path: pathlib.Path,
     min_support_var: int,
     expected_calls: int,
     expected_frameshifting: int,
@@ -125,7 +122,7 @@ def test_call_counts_per_support_threshold(
     This documents the noise structure of the locus and would catch a change in the
     support or grouping logic that the single-threshold assertions cannot see.
     """
-    results = short_read_analysis(config=make_config(tmp_path, min_support_var=min_support_var))
+    results = short_read_analysis(config=make_config(min_support_var=min_support_var))
     frameshifting = [result for result in results if len(result.repeat_variation.sequence) % 3 != 0]
     assert len(results) == expected_calls
     assert len(frameshifting) == expected_frameshifting
@@ -179,7 +176,7 @@ def test_pileup_svg_is_written(tmp_path: pathlib.Path) -> None:
     layout reasons, so neither is pinned.
     """
     svg_path = tmp_path / "pileup.svg"
-    short_read_analysis(config=make_config(tmp_path, pileup_svg_path=svg_path))
+    short_read_analysis(config=make_config(pileup_svg_path=svg_path))
 
     assert svg_path.exists()
     assert svg_path.stat().st_size > 0
@@ -190,11 +187,11 @@ def test_pileup_svg_is_written(tmp_path: pathlib.Path) -> None:
 def test_no_pileup_svg_without_a_path(tmp_path: pathlib.Path) -> None:
     """Nothing is written when no SVG path is configured.
 
-    ``tmp_path`` is also the configured ``output_dir``, so this pins the fact that the
-    analysis currently writes nothing there. Should ``output_dir`` ever be given a
-    meaning, this is the test that will say so.
+    The pileup SVG is the only file the analysis writes and ``pileup_svg_path`` is the
+    only thing that names it, so leaving it unset has to leave the directory the sibling
+    tests write their SVG into empty.
     """
-    short_read_analysis(config=make_config(tmp_path))
+    short_read_analysis(config=make_config())
 
     assert list(tmp_path.iterdir()) == []
 
@@ -209,7 +206,7 @@ def test_pileup_svg_preserves_alignment_padding(tmp_path: pathlib.Path) -> None:
     flush left and the pileup means nothing, so structural assertions do not catch it.
     """
     svg_path = tmp_path / "pileup.svg"
-    short_read_analysis(config=make_config(tmp_path, pileup_svg_path=svg_path))
+    short_read_analysis(config=make_config(pileup_svg_path=svg_path))
 
     root = ElementTree.parse(svg_path).getroot()
     texts = root.iter("{http://www.w3.org/2000/svg}text")
@@ -229,7 +226,7 @@ def test_pileup_svg_lines_sit_on_the_character_grid(tmp_path: pathlib.Path) -> N
     failure rather than a silent column drift.
     """
     svg_path = tmp_path / "pileup.svg"
-    short_read_analysis(config=make_config(tmp_path, pileup_svg_path=svg_path))
+    short_read_analysis(config=make_config(pileup_svg_path=svg_path))
 
     root = ElementTree.parse(svg_path).getroot()
     group = root.find("{http://www.w3.org/2000/svg}g")

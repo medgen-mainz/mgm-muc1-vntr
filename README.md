@@ -242,9 +242,6 @@ most pairings other than the one above need at least one of the flags set explic
 `--long-read-bam` and `--long-read-reference` must be given together; either alone exits
 with status 1.
 
-`--output-dir` exists but currently has no effect: nothing is written there, and the SVG goes
-wherever `--pileup-svg-path` points.
-
 Logging goes to stderr, so `>` redirects the results without capturing the logs.
 
 ### From a container image

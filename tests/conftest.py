@@ -55,7 +55,7 @@ def _reset_loguru():
 
 
 @pytest.fixture
-def srs_config(tmp_path) -> Callable[..., Config]:
+def srs_config() -> Callable[..., Config]:
     """Build an SRS `Config` on the committed fixture, at the CLI's own defaults."""
 
     def _make(**overrides) -> Config:
@@ -63,7 +63,6 @@ def srs_config(tmp_path) -> Callable[..., Config]:
             "input_bam": SRS_BAM,
             "reference_genome": SRS_REFERENCE,
             "genome_release": "GRCh37",
-            "output_dir": tmp_path,
             "min_support_var": 3,
             "min_support_consensus": 2,
             "trim_flank": 150,
@@ -128,7 +127,7 @@ def ont_bams() -> dict[GenomeRelease, pathlib.Path]:
 
 
 @pytest.fixture
-def lrs_config(tmp_path) -> Callable[..., LrsConfig]:
+def lrs_config() -> Callable[..., LrsConfig]:
     """Build an LRS `Config` against the masked reference for the chosen build."""
 
     def _make(input_bam: pathlib.Path, genome_release: GenomeRelease = "GRCh38", **overrides) -> LrsConfig:
@@ -136,7 +135,6 @@ def lrs_config(tmp_path) -> Callable[..., LrsConfig]:
             "input_bam": input_bam,
             "genome_release": genome_release,
             "reference_genome": REFERENCES[genome_release],
-            "output_dir": tmp_path,
             "trim_flank": 100,
             "anchor_length": 50,
         }

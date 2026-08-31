@@ -109,7 +109,7 @@ def test_print_result_header(capsys):
 
 def test_print_result_reports_the_basename_and_the_full_path(make_short_read_result):
     out = io.StringIO()
-    print_short_read_result(short_read_result=make_short_read_result(), min_support_consensus=2, file=out)
+    print_short_read_result(short_read_result=make_short_read_result(), file=out)
     fields = out.getvalue().strip().split(",")
     assert fields[0] == "sample.bam"
     assert fields[-1] == "/somewhere/sample.bam"
@@ -118,9 +118,7 @@ def test_print_result_reports_the_basename_and_the_full_path(make_short_read_res
 def test_print_result_revcomps_the_variant_sequence(make_short_read_result):
     """The CSV reports transcript orientation, the model stores reference orientation."""
     out = io.StringIO()
-    print_short_read_result(
-        short_read_result=make_short_read_result(sequence="AAGG"), min_support_consensus=2, file=out
-    )
+    print_short_read_result(short_read_result=make_short_read_result(sequence="AAGG"), file=out)
     assert out.getvalue().strip().split(",")[2] == "CCTT"
 
 
