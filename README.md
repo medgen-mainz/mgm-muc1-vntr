@@ -48,6 +48,31 @@ You can enable the long-read sequencing analysis mode by passing `--long-read-ba
 
 Note that you may have to use `--short-read-release` and `--long-read-release` to select the appropriate genome release for short and long read analysis.
 
+### From a Container Image
+
+Images are published to `ghcr.io/medgen-mainz/mgm-muc1-vntr` for `linux/amd64` and
+`linux/arm64`.
+
+| tag | what it is |
+| --- | --- |
+| `latest`, `X.Y.Z`, `X.Y` | releases |
+| `main` | the tip of `main` |
+| `sha-<short>` | one per merge, pruned after 30 days |
+| `pr-<N>` | one per open pull request, deleted when it closes |
+
+Reference FASTAs and BAMs are not in the image. Mount them and refer to the paths inside
+the container:
+
+```
+docker run --rm -v /path/to/data:/data \
+    ghcr.io/medgen-mainz/mgm-muc1-vntr:latest run \
+    --short-read-reference /data/hs37d5.fa \
+    --short-read-bam /data/Sample.bam
+```
+
+Output files are written as root by default. Add `--user "$(id -u):$(id -g)"` to have them
+land with your own ownership.
+
 ## Developer Notes
 
 First, install `pixi`

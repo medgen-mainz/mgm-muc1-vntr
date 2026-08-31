@@ -1,0 +1,84 @@
+name: docker
+
+# Tag namespaces, one per trigger (#7):
+#
+#   push to main            main, sha-<short>
+#   pull request            pr-<N>, deleted again by docker-cleanup.yml when the PR closes
+#   release tag             X.Y.Z, X.Y, latest
+#
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+  # So an image can be built before the first tag exists, and to re-run a failed publish.
+  workflow_dispatch:
+
+permissions: {}
+
+# A second push to the same PR or branch makes the in-flight build pointless.
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # Fork pull requests get a read-only GITHUB_TOKEN, so pushing would fail. They build
+      # and are thrown away instead, which still catches a broken Dockerfile. Never switch
+      # this to pull_request_target to work around it: that runs untrusted code with a
+      # writable token.
+      PUSH: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # arm64 is emulated. There is nothing to compile, the conda and wheel artefacts are
+      # prebuilt for linux-aarch64, so emulation only costs unpacking time.
+      - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Log in to ghcr.io
+        if: env.PUSH == 'true'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository }}
+          # `latest` is pinned to tag pushes. The action's default puts it on the default
+          # branch, which would make `docker pull ...:latest` fetch an unreleased build.
+          #
+          # `type=sha` is off for pull requests. On a PR it resolves to the merge commit, so
+          # every push to every PR would leave a `sha-` tag that the pr-<N> cleanup does not
+          # match and only the 30 day prune would eventually collect.
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,enable=${{ github.event_name != 'pull_request' }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Build and push
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          # Pull requests build one architecture; the second is emulated and slow, and a
+          # broken build breaks on both.
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          push: ${{ env.PUSH == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

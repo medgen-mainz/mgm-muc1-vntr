@@ -1,0 +1,57 @@
+name: docker-cleanup
+
+# GHCR has no retention policy of its own, so the two kinds of garbage the publish workflow
+# produces are collected here:
+#
+#   pr-<N>      one per pull request, deleted when that pull request closes
+#   untagged    every push to main overwrites :main and orphans the previous manifest
+#   sha-<short> one per merge, pruned on a 30 day window
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    # Weekly, at an off-peak minute so it does not collide with the hourly rush.
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  pr-image:
+    # Fork pull requests never got an image pushed, and their token could not delete one
+    # anyway, so there is nothing to do for them.
+    if: >
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          package: ${{ github.event.repository.name }}
+          delete-tags: pr-${{ github.event.pull_request.number }}
+
+  # Nothing here touches a release tag: the first step only removes manifests that carry no
+  # tag at all, the second only matches the `sha-` namespace.
+  scheduled:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Delete untagged manifests
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          package: ${{ github.event.repository.name }}
+          delete-untagged: true
+
+      - name: Prune sha- tags older than 30 days
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          package: ${{ github.event.repository.name }}
+          delete-tags: 'sha-*'
+          older-than: 30 days
