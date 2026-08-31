@@ -101,28 +101,34 @@ All tooling runs through the Makefile:
 | `make test` | pytest with coverage |
 | `make test-snapshot` | same suite, updating snapshots |
 | `make build` | sdist and wheel |
-| `make lock` | upgrade `pixi.lock` |
+| `make lock` | upgrade `uv.lock` |
 
 Two invariants worth knowing before you touch the build:
 
-- **`pixi.lock` is authoritative.** Every tool runs via `pixi run --locked`, which fails
+- **`uv.lock` is authoritative.** Every tool runs via `uv run --locked`, which fails
   on a lockfile stale against `pyproject.toml` rather than silently re-resolving.
   Do not add a second environment manager on top; that is the bug this replaced.
-  pixi took over from uv in #17 and `uv.lock` is deleted, not kept in parallel.
+  There has only ever been one at a time: pixi took over from uv in #17, uv took it back
+  in #38 once #37 removed pycairo, and the outgoing lockfile is deleted, not kept in
+  parallel. The interpreter is pinned in `.python-version`.
 - **`src/mgm_muc1_vntr/version.py` is the only place a version literal lives.**
   `pyproject.toml` declares `dynamic = ["version"]` and derives it. Never add a
   static `version` to `[project]`.
 
-There are no system libraries to install. pysam comes from a PyPI wheel with htslib bundled
-in, and pycairo, which was the reason for the cairo headers, is gone since #24, so the bzip2,
-cairo and lzma development packages a checkout used to need are gone with it. `pixi.lock` now
-has no conda-side package at all. If you find yourself adding an `apt-get install` to make
-something build, that is a sign the dependency belongs on the conda side of `pyproject.toml`
-instead. Checkouts do still need `git lfs` installed to get
-the BAM fixtures; without it you get pointer files and any test that opens one fails.
+There are no system libraries to install. Every dependency is a PyPI wheel: pysam bundles
+htslib, and pycairo, which was the reason for the cairo headers and the reason pixi was
+adopted, is gone since #37. If you find yourself adding an `apt-get install` to make
+something build, that is a sign the dependency has stopped shipping a wheel; fix that rather
+than the runner. Checkouts do still need `git lfs` installed to get the BAM fixtures; without
+it you get pointer files and any test that opens one fails.
 
-Python 3.14 is permitted by `requires-python` but not covered by CI; the reason is a
-resolver constraint on linux-64 documented at length in `pyproject.toml`.
+Regenerating the synthetic fixtures is the one job `uv.lock` cannot do. bwa, samtools and
+wgsim are bioconda-only, so they are installed by hand; `tests/data/README.md` says how and
+records the MucOneUp commit that `pixi.lock` used to pin.
+
+Python 3.14 is permitted by `requires-python` but not covered by CI. The reason it was
+dropped, that pysam had no cp314 wheel, no longer holds as of pysam 0.24.0; see the note in
+`pyproject.toml` before assuming the leg still cannot be restored.
 
 ## Worktrees
 

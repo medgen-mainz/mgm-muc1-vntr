@@ -14,14 +14,14 @@
 There are no system packages to install first. Everything, including the compiled
 dependencies, comes from the lockfile.
 
-Install pixi:
+Install uv:
 
 ```
-curl -fsSL https://pixi.sh/install.sh | sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Then `pixi run` any command in the project environment; the first invocation creates it
-from `pixi.lock`.
+Then `uv run` any command in the project environment; the first invocation creates it
+from `uv.lock`.
 
 Then, you will need the reference that you mapped the SRS/LRS data to.
 Below, we use `hs37d5.fa` for SRS data and `hs38.fa` for LRS data.
@@ -31,7 +31,7 @@ Also, your BAM file must have a `.bai` index.
 Then:
 
 ```
-pixi run mgm-muc1-vntr run \
+uv run mgm-muc1-vntr run \
     --short-read-reference path/to/hs37d5.fa \
     --short-read-bam path/to/Sample.bam
 ```
@@ -75,22 +75,22 @@ land with your own ownership.
 
 ## Developer Notes
 
-First, install `pixi`
+First, install `uv`
 
 ```
-# curl -fsSL https://pixi.sh/install.sh | sh
+# curl -LsSf https://astral.sh/uv/install.sh | sh
 [...]
-# which pixi
-/home/mholtgrewe/.pixi/bin/pixi
+# which uv
+/home/mholtgrewe/.local/bin/uv
 ```
 
-Clone and run with pixi:
+Clone and run with uv:
 
 ```
 # git clone git@github.com:medgen-mainz/mgm-muc1-vntr.git
 # cd mgm-muc1-vntr
-# pixi run mgm-muc1-vntr --help
+# uv run mgm-muc1-vntr --help
 ```
 
-The environment is created from `pixi.lock` on first use. `make check` and `make test` are
-the same entry points CI runs.
+The environment is created from `uv.lock` on first use, on the interpreter named in
+`.python-version`. `make check` and `make test` are the same entry points CI runs.

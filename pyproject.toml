@@ -57,7 +57,7 @@ dev = [
 ]
 
 # There are deliberately no `[tool.hatch.envs.*]` sections. `make check` and `make test` run
-# every tool through `pixi run --locked`, so `pixi.lock` governs what actually executes. The
+# every tool through `uv run --locked`, so `uv.lock` governs what actually executes. The
 # hatch `quality`, `tests`, `docs` and `build` environments each carried `installer = "uv"`
 # and resolved themselves fresh against the index, which made the lockfile decorative --
 # nothing in hatch reads a lockfile, and `installer` selects the installer, not the
@@ -67,88 +67,54 @@ dev = [
 # sections all stay: the build backend never had an environment and never drifted. It is the
 # hatch *environment manager* that is gone, and with it the `hatch` dev dependency.
 #
-# The same reasoning is why there is one environment manager and not two. pixi replaced uv
-# outright in #17; `uv.lock` is deleted, not kept alongside `pixi.lock`. Two lockfiles is the
-# shape of the bug #9 fixed.
+# The same reasoning is why there is one environment manager and not two. uv replaced pixi
+# outright in #38 and `pixi.lock` is deleted, not kept alongside `uv.lock`, exactly as
+# `uv.lock` was deleted when pixi arrived in #17. Two lockfiles is the shape of the bug #9
+# fixed. pixi was adopted for one dependency, pycairo, which published Windows wheels only
+# and had to be compiled against system cairo headers everywhere else; #37 removed pycairo
+# and left the conda side with nothing to do.
 
-# pysam is deliberately *not* a conda dependency. Its PyPI wheels are auditwheel-repaired
-# manylinux and macOS builds with htslib bundled in, so on 3.13 they need no system bzip2 or
-# lzma either; those two apt packages were only ever required by the 3.14 source build. The
-# bioconda pysam was tried and rejected: pixi's conda-to-PyPI name mapping covers conda-forge
-# only, so a bioconda pysam is not recognised as satisfying the `pysam` requirement in
-# `[project.dependencies]` and gets installed a second time from PyPI on top of itself.
-[tool.pixi.workspace]
-channels = ["conda-forge"]
-# win-64 is absent deliberately: pysam publishes no Windows wheel and bioconda has no
-# Windows build either, so the platform is not supportable regardless of package manager.
-# linux-aarch64 is here for the arm64 container image (#7).
-platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
-
-# pixi does not install the project into its own environment implicitly the way `uv run`
-# did, so the `mgm-muc1-vntr` console script would not exist without this. Editable, so a
-# source edit is picked up without a reinstall. The container image (#7) needs the source
-# tree present alongside the environment for this to resolve, or a non-editable install of
-# its own.
-[tool.pixi.pypi-dependencies]
-mgm_muc1_vntr = { path = ".", editable = true }
-
-# The `build` glob excludes the free-threaded interpreters, so the solver picks the same
-# interpreter build on every platform rather than `*_cp313t` on some and not others.
-[tool.pixi.feature.py313.dependencies]
-python = { version = "3.13.*", build = "*_cp313" }
-
-# Why there is no py314 environment
-# ---------------------------------
-# The uv matrix tested 3.13 and 3.14. Under pixi the 3.14 leg cannot be honoured on linux-64,
-# the only platform CI and the container image run on, by either route:
+# pysam is why the conda side looked necessary and why it is not. Its PyPI wheels are
+# auditwheel-repaired manylinux and macOS builds with htslib bundled in, so they need no
+# system bzip2 or lzma. The bioconda build was tried under pixi and rejected: pixi's
+# conda-to-PyPI name mapping covers conda-forge only, so a bioconda pysam was not recognised
+# as satisfying the `pysam` requirement and got installed a second time from PyPI on top of
+# itself.
 #
-#   - From PyPI, pysam has no cp314 wheel, so it builds htslib from source and needs
-#     libbz2-dev and liblzma-dev back.
-#   - From bioconda, every pysam build for 3.14 on linux-64, across 0.23.3 and 0.24.0 and
-#     every build number, declares `python_abi 3.14.* *_cp314t`, that is free-threaded only.
-#     osx-64, osx-arm64 and linux-aarch64 have ordinary `*_cp314` builds; linux-64 does not.
-#     Resolving it there drags in the free-threaded interpreter.
+# What replaces pixi's `platforms` list is nothing declarative. `uv.lock` is a universal
+# resolution, so every platform is already in it, and `[tool.uv] required-environments` is
+# not the equivalent it looks like: it demands a resolvable artefact, and an sdist counts, so
+# it would pass on a package that had lost its arm64 wheel. Verified by hand instead, and the
+# check is one command:
 #
-# Both paths compile htslib from source on the platform CI runs on, so the 3.14 leg stays
-# dropped. Only the pysam half of this argument survives #24; the pycairo half went with the
-# dependency. `requires-python = ">=3.13"` is unchanged,
-# so 3.14 is still permitted, it is simply no longer covered by CI. Restoring it is a
-# four-line change once either upstream ships a usable 3.14 build for linux-64.
-
-# Fixture generation only. Not part of `default`, so a normal checkout does not pay for it.
-# bwa, samtools and wgsim are bioconda-only; conda-forge is listed first so it keeps priority
-# for shared libraries. Getting that order wrong resolves an ancient ncurses and samtools
-# dies with `libncurses.so.5: cannot open shared object file`.
+#   uv export --no-dev --no-emit-project -o /tmp/prod.txt
+#   uv pip install --dry-run --only-binary :all: \
+#       --python-platform aarch64-manylinux_2_28 --python-version 3.13 -r /tmp/prod.txt
 #
-# linux-64 only: the fixtures are generated once by a maintainer, and pinning the other
-# platforms would force the solver to find bwa builds that need not exist.
-[tool.pixi.feature.fixtures]
-channels = ["conda-forge", "bioconda"]
-platforms = ["linux-64"]
+# All 16 runtime packages have arm64 wheels, which is what the arm64 container image (#7)
+# needs. Windows is unsupportable either way, pysam publishes no Windows wheel.
 
-[tool.pixi.feature.fixtures.dependencies]
-python = "3.13.*"
-bwa = ">=0.7.19"
-samtools = ">=1.21"
-wgsim = "*"
+# Why CI has no 3.14 leg
+# ----------------------
+# The reason recorded here under pixi no longer holds and is not being quietly restated.
+# pysam 0.24.0, released 2026-04-27, publishes cp314 manylinux wheels for x86_64 and
+# aarch64, so `pysam>=0.23.3` on 3.14 no longer compiles htslib and no longer needs
+# libbz2-dev and liblzma-dev. The same dry run as above with `--python-version 3.14`
+# resolves the whole runtime set from wheels, and `uv run --python 3.14 pytest` passes
+# locally. The 3.14 leg stays out of this pull request only because it swaps the tooling
+# and should not also change what CI covers; restoring the matrix is a separate change.
 
-# MucOneUp is the haplotype simulator. Pinned to a tag, and the lockfile records the commit,
-# so a regenerated fixture is traceable to an exact simulator version.
-[tool.pixi.feature.fixtures.pypi-dependencies]
-muc-one-up = { git = "https://github.com/berntpopp/MucOneUp.git", tag = "v0.44.4" }
-
-[tool.pixi.feature.fixtures.tasks]
-make-fixtures = "tests/data/make_synthetic_fixtures.sh"
-
-# `prod` shares a solve group with `default`, so the container image (#7) gets byte-identical
-# pysam and runtime versions to the ones the tests ran against, minus the dev tools.
+# Fixture generation is the one thing that genuinely wanted conda, and it is no longer wired
+# into the environment manager. bwa, samtools and wgsim are bioconda-only with no PyPI
+# distribution, so the `fixtures` pixi environment (#33) cannot be expressed in `uv.lock` and
+# went with pixi. The tools are installed by hand now; tests/data/README.md says how, and it
+# carries the MucOneUp commit that `pixi.lock` used to record, since a git tag is mutable and
+# the tag pin in make_synthetic_fixtures.sh alone would not pin the simulator.
 #
-# There is no `[tool.pixi.dependencies]` any more: #24 removed pycairo, the only conda-side
-# package. Whether pixi still earns its place is deliberately left open, per that issue.
-[tool.pixi.environments]
-default = { features = ["py313", "dev"], solve-group = "py313" }
-prod = { features = ["py313"], solve-group = "py313" }
-fixtures = { features = ["fixtures"], no-default-feature = true }
+# This is a maintainer-only path, run when a fixture is regenerated. The fixtures themselves
+# are committed via Git LFS, so nothing in `make check`, `make test` or the image depends on
+# it. Keeping pixi alive for this one environment was the alternative and was rejected: it
+# means two environment managers and two lockfiles, which is what #9 fixed.
 
 [tool.pyright]
 include = ["src/mgm_muc1_vntr", "examples"]

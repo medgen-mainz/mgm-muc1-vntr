@@ -1,21 +1,22 @@
-# Every Python tool runs from the environment `pixi` resolves out of `pixi.lock`, so the
-# lockfile governs what `make check` and `make test` actually execute. This replaced
-# `uv run hatch run <env>:<script>`, under which hatch built its own `quality` and `tests`
-# environments and resolved them fresh against the index -- the lockfile's only
-# contribution was the `hatch` binary itself (#9). `--locked` additionally fails rather
-# than re-resolving if `pixi.lock` has gone stale against `pyproject.toml`.
+# Every Python tool runs from the environment `uv` syncs out of `uv.lock`, so the lockfile
+# governs what `make check` and `make test` actually execute. This is the same guarantee pixi
+# gave (#17) and, before it, the one `uv run hatch run <env>:<script>` did not: hatch built
+# its own `quality` and `tests` environments and resolved them fresh against the index, so
+# the lockfile's only contribution was the `hatch` binary itself (#9). `--locked` additionally
+# fails rather than re-resolving if `uv.lock` has gone stale against `pyproject.toml`.
 #
-# pixi replaced uv in #17, so that the compiled dependencies arrive as prebuilt binaries and
-# a checkout no longer needs system headers installed by hand. It is a replacement and not an
-# addition: there is one lockfile, and `uv.lock` is gone.
-PIXI_RUN := pixi run --locked
+# uv replaced pixi in #38, once #37 removed pycairo and left no dependency that needs conda.
+# It is a replacement and not an addition: there is one lockfile, and `pixi.lock` is gone.
+# The interpreter comes from `.python-version`, which is what `[tool.pixi.feature.py313]`
+# used to pin.
+UV_RUN := uv run --locked
 
 # Shared by `test` and `test-snapshot` so the two cannot drift into running different
 # suites -- the snapshot update has to be the same run, or it records snapshots for
 # something `make test` does not execute. `src/mgm_muc1_vntr` is a collection path, not a
 # typo: `[tool.pytest.ini_options] addopts = "--doctest-modules"` collects the doctests in
 # the package itself.
-PYTEST := $(PIXI_RUN) pytest --cov=src/mgm_muc1_vntr --cov-report=term-missing \
+PYTEST := $(UV_RUN) pytest --cov=src/mgm_muc1_vntr --cov-report=term-missing \
 	--durations 5 -s tests/ src/mgm_muc1_vntr
 
 .PHONY: default
@@ -45,23 +46,23 @@ check:
 
 .PHONY: check-format
 check-format:
-	$(PIXI_RUN) black --check --diff --preview src tests
+	$(UV_RUN) black --check --diff --preview src tests
 
 .PHONY: check-lint
 check-lint:
-	$(PIXI_RUN) ruff check src tests
+	$(UV_RUN) ruff check src tests
 
-# No `--pythonpath` needed. Under `pixi run` there is exactly one environment for pyright to
+# No `--pythonpath` needed. Under `uv run` there is exactly one environment for pyright to
 # analyse, so the nested `uv run --active hatch run quality:python -c ...` that used to
 # discover which of the two venvs to point at is gone (#9).
 .PHONY: check-types
 check-types:
-	$(PIXI_RUN) pyright src/ tests/
+	$(UV_RUN) pyright src/ tests/
 
 .PHONY: fix
 fix:
-	$(PIXI_RUN) black --preview src tests
-	$(PIXI_RUN) ruff check --fix --unsafe-fixes src tests
+	$(UV_RUN) black --preview src tests
+	$(UV_RUN) ruff check --fix --unsafe-fixes src tests
 	$(MAKE) check-lint
 
 .PHONY: test
@@ -72,16 +73,16 @@ test:
 test-snapshot:
 	$(PYTEST) --snapshot-update
 
-# `python -m build` replaces `uv build`, which replaced the `[tool.hatch.envs.build]`
-# environment whose only script was `hatch build`. All three drive the same `hatchling`
-# backend from `[build-system]`; this one is the PEP 517 frontend and needs no uv.
+# `python -m build` rather than `uv build`, which is what the pixi switch (#17) left behind
+# and what replaced the `[tool.hatch.envs.build]` environment whose only script was
+# `hatch build`. All three drive the same `hatchling` backend from `[build-system]`; keeping
+# the PEP 517 frontend means `make build` is not tied to uv's own build path.
 .PHONY: build
 build:
-	$(PIXI_RUN) python -m build
+	$(UV_RUN) python -m build
 
-# `pixi lock` alone only refreshes the lockfile against the manifest. Moving every package to
-# the newest version the constraints allow, which is what `uv lock --upgrade` did, is
-# `pixi update`.
+# `uv lock` alone only refreshes the lockfile against the manifest. `--upgrade` is what moves
+# every package to the newest version the constraints allow, which is what `pixi update` did.
 .PHONY: lock
 lock:
-	pixi update
+	uv lock --upgrade
