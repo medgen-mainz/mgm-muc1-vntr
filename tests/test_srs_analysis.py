@@ -171,6 +171,6 @@ def test_generate_pileup_svg_from_hand_built_results(make_short_read_result, tmp
 
     assert with_both.stat().st_size > 0
     assert ElementTree.parse(with_both).getroot().tag.endswith("svg")
-    # cairo emits glyph references rather than literal text, so compare renders instead of
-    # searching for read names: the group below support must contribute nothing.
+    # The group below support must contribute nothing, so the two renders are identical.
     assert with_both.read_bytes() == only_supported.read_bytes()
+    assert below_support.example_read not in with_both.read_text()

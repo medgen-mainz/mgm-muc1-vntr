@@ -17,7 +17,6 @@ classifiers = [
 dependencies = [
     "biopython>=1.86",
     "loguru>=0.7.3",
-    "pycairo>=1.28.0",
     "pydantic>=2.12.4",
     "pysam>=0.23.3",
     "typer>=0.20.0",
@@ -72,29 +71,18 @@ dev = [
 # outright in #17; `uv.lock` is deleted, not kept alongside `pixi.lock`. Two lockfiles is the
 # shape of the bug #9 fixed.
 
-# pycairo is the reason this project uses pixi at all. It publishes Windows wheels and
-# nothing else, so every Linux and macOS install compiled it from the sdist against system
-# cairo headers, which is what the `sudo apt install libcairo-dev` prerequisite was for.
-# Taking it from conda-forge removes that step entirely (#17).
-#
 # pysam is deliberately *not* a conda dependency. Its PyPI wheels are auditwheel-repaired
 # manylinux and macOS builds with htslib bundled in, so on 3.13 they need no system bzip2 or
 # lzma either; those two apt packages were only ever required by the 3.14 source build. The
 # bioconda pysam was tried and rejected: pixi's conda-to-PyPI name mapping covers conda-forge
 # only, so a bioconda pysam is not recognised as satisfying the `pysam` requirement in
 # `[project.dependencies]` and gets installed a second time from PyPI on top of itself.
-#
-# Keeping exactly one package on the conda side is also what makes this migration
-# reviewable: every other version in the tree is the one uv already resolved.
 [tool.pixi.workspace]
 channels = ["conda-forge"]
 # win-64 is absent deliberately: pysam publishes no Windows wheel and bioconda has no
 # Windows build either, so the platform is not supportable regardless of package manager.
 # linux-aarch64 is here for the arm64 container image (#7).
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64"]
-
-[tool.pixi.dependencies]
-pycairo = ">=1.28.0"
 
 # pixi does not install the project into its own environment implicitly the way `uv run`
 # did, so the `mgm-muc1-vntr` console script would not exist without this. Editable, so a
@@ -104,10 +92,8 @@ pycairo = ">=1.28.0"
 [tool.pixi.pypi-dependencies]
 mgm_muc1_vntr = { path = ".", editable = true }
 
-# The `build` glob excludes the free-threaded interpreters. Without it the solver may pick
-# `*_cp313t` on some platforms and not others, and conda-forge builds no pycairo against the
-# free-threaded ABI, so pixi would silently fall back to compiling the pycairo sdist from
-# PyPI -- the exact thing this migration removes.
+# The `build` glob excludes the free-threaded interpreters, so the solver picks the same
+# interpreter build on every platform rather than `*_cp313t` on some and not others.
 [tool.pixi.feature.py313.dependencies]
 python = { version = "3.13.*", build = "*_cp313" }
 
@@ -121,11 +107,11 @@ python = { version = "3.13.*", build = "*_cp313" }
 #   - From bioconda, every pysam build for 3.14 on linux-64, across 0.23.3 and 0.24.0 and
 #     every build number, declares `python_abi 3.14.* *_cp314t`, that is free-threaded only.
 #     osx-64, osx-arm64 and linux-aarch64 have ordinary `*_cp314` builds; linux-64 does not.
-#     Resolving it there drags in the free-threaded interpreter, for which conda-forge has no
-#     pycairo, so pycairo reverts to a compiled sdist.
+#     Resolving it there drags in the free-threaded interpreter.
 #
-# Both paths reintroduce the prerequisite this migration exists to delete, so the 3.14 leg is
-# dropped rather than quietly compiling something. `requires-python = ">=3.13"` is unchanged,
+# Both paths compile htslib from source on the platform CI runs on, so the 3.14 leg stays
+# dropped. Only the pysam half of this argument survives #24; the pycairo half went with the
+# dependency. `requires-python = ">=3.13"` is unchanged,
 # so 3.14 is still permitted, it is simply no longer covered by CI. Restoring it is a
 # four-line change once either upstream ships a usable 3.14 build for linux-64.
 
@@ -155,7 +141,10 @@ muc-one-up = { git = "https://github.com/berntpopp/MucOneUp.git", tag = "v0.44.4
 make-fixtures = "tests/data/make_synthetic_fixtures.sh"
 
 # `prod` shares a solve group with `default`, so the container image (#7) gets byte-identical
-# pycairo, pysam and runtime versions to the ones the tests ran against, minus the dev tools.
+# pysam and runtime versions to the ones the tests ran against, minus the dev tools.
+#
+# There is no `[tool.pixi.dependencies]` any more: #24 removed pycairo, the only conda-side
+# package. Whether pixi still earns its place is deliberately left open, per that issue.
 [tool.pixi.environments]
 default = { features = ["py313", "dev"], solve-group = "py313" }
 prod = { features = ["py313"], solve-group = "py313" }

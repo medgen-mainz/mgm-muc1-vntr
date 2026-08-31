@@ -6,8 +6,8 @@
 # than re-resolving if `pixi.lock` has gone stale against `pyproject.toml`.
 #
 # pixi replaced uv in #17, so that the compiled dependencies arrive as prebuilt binaries and
-# a checkout no longer needs system cairo headers installed by hand. It is a replacement and
-# not an addition: there is one lockfile, and `uv.lock` is gone.
+# a checkout no longer needs system headers installed by hand. It is a replacement and not an
+# addition: there is one lockfile, and `uv.lock` is gone.
 PIXI_RUN := pixi run --locked
 
 # Shared by `test` and `test-snapshot` so the two cannot drift into running different
