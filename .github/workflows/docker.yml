@@ -63,12 +63,16 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           # `latest` is pinned to tag pushes. The action's default puts it on the default
           # branch, which would make `docker pull ...:latest` fetch an unreleased build.
+          #
+          # `type=sha` is off for pull requests. On a PR it resolves to the merge commit, so
+          # every push to every PR would leave a `sha-` tag that the pr-<N> cleanup does not
+          # match and only the 30 day prune would eventually collect.
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=match,pattern=v(\d+\.\d+\.\d+),group=1
             type=match,pattern=v(\d+\.\d+),group=1
-            type=sha
+            type=sha,enable=${{ github.event_name != 'pull_request' }}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
 
       - name: Build and push
