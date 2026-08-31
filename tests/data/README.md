@@ -94,3 +94,51 @@ Note the GRCh37 gene slice contains a secondary alignment with `SEQ=*`, for whic
 `query_sequence` is `None` and the `assert read_sequence` in `long_read_analysis` fires. It
 lies outside the VNTR interval, so the fetch never reaches it, and the downsampling drops
 it along with every other record without a sequence.
+## `synth_insCCCC.bam`, `synth_insCCC_benign.bam`, `synth_dupC.bam`
+
+Simulated MUC1 haplotypes with a known variant, so the expected analysis result is known
+by construction rather than characterised after the fact. Regenerate with
+
+```
+pixi run -e fixtures make-fixtures
+```
+
+which runs `make_synthetic_fixtures.sh`. Tool versions come from the `fixtures` pixi
+environment and are pinned in `pixi.lock`.
+
+Each is heterozygous: MucOneUp mutates haplotype 1 of a diploid pair and leaves haplotype
+2 alone. 60 repeats per haplotype, hg19 flanks, 10,000 read pairs of 150 bp from `wgsim`
+with error and variant injection switched off, aligned with `bwa mem` against
+`GRCh37_1_MUC1_masked.fa.gz`.
+
+| fixture | mutation | Δbp | frameshift | analysis finds it |
+| --- | --- | --- | --- | --- |
+| `synth_insCCCC` | `insCCCC` | +4 | yes | yes, `ins` of 4 bp, support 63 |
+| `synth_insCCC_benign` | `insCCC_benign` | +3 | no | yes, `ins` of 3 bp, support 57 |
+| `synth_dupC` | `dupC` | +1 | yes | **no**, see below |
+
+Called sequences are the reverse complement of what MucOneUp inserts, `GGGG` for an
+inserted `CCCC`, because MUC1 is on the minus strand and the analysis reports in reference
+orientation.
+
+`synth_dupC` documents a limitation rather than a capability. `short_read_analysis` skips
+any read without an indel of at least 2 bp, and dupC is a single base insertion, so all 60
+supporting reads are discarded before being counted. The pathogenic ADTKD-MUC1 allele is
+exactly this variant. The test asserts the current behaviour and is meant to fail when the
+filter is fixed.
+
+`bwa` rather than `minimap2`: `NA24149_MUC1_SRS.bam` was aligned with bwa-mem, so the
+fixtures share its provenance. On identical reads minimap2 also called a 48 bp deletion
+that bwa does not, which would have been baked into expected output. bwa also emits MD
+tags by default, which the analysis requires through `pysam`'s
+`get_reference_sequence()`.
+
+### MucOneUp
+
+The haplotypes come from MucOneUp, which is not a dependency of this project.
+
+- Repository: <https://github.com/berntpopp/MucOneUp> (MIT), pinned at `v0.44.4`
+- Software: Popp B. *MucOneUp*. doi:[10.5281/zenodo.19740405](https://doi.org/10.5281/zenodo.19740405)
+- Paper: Popp B, Saei H. *MucOneUp: A Simulation Framework for MUC1-VNTR Variant
+  Benchmarking*. bioRxiv, 12 May 2026.
+  doi:[10.64898/2026.05.08.723876](https://doi.org/10.64898/2026.05.08.723876)
