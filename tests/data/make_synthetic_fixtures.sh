@@ -84,7 +84,15 @@ for case in "${CASES[@]}"; do
     "${WORKDIR}/${base}.r1.fq" "${WORKDIR}/${base}.r2.fq" > /dev/null
   bwa mem -t 4 "${WORKDIR}/ref.fa" \
     "${WORKDIR}/${base}.r1.fq" "${WORKDIR}/${base}.r2.fq" 2> /dev/null \
-    | samtools sort -o "${DATA_DIR}/${base}.bam" -
+    | samtools sort -o "${WORKDIR}/${base}.sorted.bam" -
+  # @PG records each command line verbatim, so the generating machine's workdir would be
+  # committed inside the fixture. Rewrite every absolute path to its bare file name.
+  # --no-PG on both: the rewriting steps would otherwise add @PG lines of their own, with
+  # the very paths being removed.
+  samtools view -H --no-PG "${WORKDIR}/${base}.sorted.bam" \
+    | sed -E 's#(^|[[:space:]])/[^[:space:]]*/#\1#g' > "${WORKDIR}/${base}.header.sam"
+  samtools reheader --no-PG "${WORKDIR}/${base}.header.sam" "${WORKDIR}/${base}.sorted.bam" \
+    > "${DATA_DIR}/${base}.bam"
   samtools index "${DATA_DIR}/${base}.bam"
   samtools quickcheck -v "${DATA_DIR}/${base}.bam"
 done
