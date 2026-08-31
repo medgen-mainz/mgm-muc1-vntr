@@ -23,13 +23,22 @@ jobs:
         with:
           python-version: "3.13"
 
+      # Every step below is a Makefile entry point, run exactly as it is run locally. The
+      # tools come from `uv.lock` via `uv run --locked`, so this job cannot lint or type
+      # check against a different toolchain than a developer does, and a `uv.lock` gone
+      # stale against `pyproject.toml` fails the step instead of being silently re-solved
+      # (#9).
+      - name: Check Formatting
+        run: |
+          make check-format
+
       - name: Run Lint
         run: |
-          uv run hatch run quality:check
+          make check-lint
 
       - name: Run Type Checks
         run: |
-          uv run hatch run quality:typecheck
+          make check-types
 
   testing:
     runs-on: ubuntu-latest
@@ -56,4 +65,4 @@ jobs:
 
       - name: Run tests
         run: |
-            uv run hatch run tests:run
+            make test
