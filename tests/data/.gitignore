@@ -1,2 +1,19 @@
+# Local working fixtures stay out of the repository by default: a full BAM or an
+# uncompressed reference is far too large to commit, and it is easy to drop one here
+# while debugging.
 *.bam
 *.bai
+*.fa
+*.fna
+*.fasta
+
+# Derived index files. Regenerate with `samtools faidx` rather than committing them.
+*.fai
+*.gzi
+
+# Fixtures that are deliberately part of the test suite are negated individually, so
+# adding one is always an explicit act. They are stored via Git LFS, see /.gitattributes.
+!NA24149_MUC1_SRS.bam
+!NA24149_MUC1_SRS.bam.bai
+!GRCh37_1_MUC1_masked.fa.gz
+!GRCh38_chr1_MUC1_masked.fa.gz
