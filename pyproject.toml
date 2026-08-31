@@ -46,7 +46,6 @@ dev = [
     "coverage>=7.10.7",
     "docutils>=0.18.1,<0.22",
     "flake8>=3.6.0",
-    "hatch~=1.14.2",
     "pyright",
     "pytest-cache>=1.0",
     "pytest-cov",
@@ -57,28 +56,16 @@ dev = [
     "syrupy>=5.0.0",
 ]
 
-[tool.hatch.envs.quality]
-installer = "uv"
-feature = [
-  "dev",
-]
-
-[tool.hatch.envs.quality.scripts]
-check = [
-  "black --check --diff --preview src tests",
-  "ruff check src tests",
-]
-format = [
-  "black src tests",
-  "ruff check --fix --unsafe-fixes src tests",
-  "check",
-]
-typecheck = [
-  """
-  pyright --pythonpath="$(uv run --active hatch run quality:python -c 'import sys; print(sys.executable)')" \
-    {args:src/ tests//}
-  """
-]
+# There are deliberately no `[tool.hatch.envs.*]` sections. `make check` and `make test` run
+# every tool through `uv run --locked`, so `uv.lock` governs what actually executes. The
+# hatch `quality`, `tests`, `docs` and `build` environments each carried `installer = "uv"`
+# and resolved themselves fresh against the index, which made the lockfile decorative --
+# nothing in hatch reads a lockfile, and `installer` selects the installer, not the
+# resolver (#9). The commands live in the Makefile.
+#
+# `hatchling` in `[build-system]`, `[tool.hatch.version]` and the `[tool.hatch.build.targets.*]`
+# sections all stay: the build backend never had an environment and never drifted. It is the
+# hatch *environment manager* that is gone, and with it the `hatch` dev dependency.
 
 [tool.pyright]
 include = ["src/mgm_muc1_vntr", "examples"]
@@ -125,36 +112,6 @@ addopts = "--doctest-modules"
 
 [tool.ruff.lint.isort]
 known-first-party = ["src/mgm_muc1_vntr"]
-
-[tool.hatch.envs.tests]
-installer = "uv"
-feature = [
-  "dev",
-]
-
-[tool.hatch.envs.tests.scripts]
-run = "pytest --cov=src/mgm_muc1_vntr --cov-report=term-missing --durations 5 -s tests/ src/mgm_muc1_vntr {args:tests}"
-run-snapshot = "pytest --cov=src/mgm_muc1_vntr --cov-report=term-missing --durations 5 -s --snapshot-update tests/ src/mgm_muc1_vntr {args:tests}"
-
-[tool.hatch.envs.docs]
-installer = "uv"
-feature = [
-  "dev",
-]
-
-[tool.hatch.envs.docs.scripts]
-build = "sphinx-build -b html docs docs/_build/html"
-clean = "rm -rf docs/_build"
-serve = "python -m http.server 8000 --directory docs/_build/html"
-
-[tool.hatch.envs.build]
-installer = "uv"
-feature = [
-  "dev",
-]
-
-[tool.hatch.envs.build.scripts]
-run = "hatch build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mgm_muc1_vntr"]
