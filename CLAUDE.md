@@ -123,6 +123,51 @@ the BAM fixtures; without it you get pointer files and any test that opens one f
 Python 3.14 is permitted by `requires-python` but not covered by CI; the reason is a
 resolver constraint on linux-64 documented at length in `pyproject.toml`.
 
+## Worktrees
+
+The naming and the branching rule are adapted from `mgm-core` in the internal `mgm` plugin
+marketplace, `gitea.mgm-intern.de/mgm/coding-agent-utils`. That plugin is deliberately not
+enabled here: it drives Gitea through the `tea` CLI, whereas this repository is on GitHub,
+where `gh` is the tool and an issue is linked by `Closes #<n>` in the PR body rather than by
+a branch-name prefix. Enabling it would hand an agent commands for the wrong forge. What
+transfers is this:
+
+```
+branch:    <issue-number>-<type>-<kebab-case-slug>
+worktree:  ~/Development/mgm-muc1-vntr-<issue-number>
+```
+
+`<type>` is the conventional-commit type. Branch from `origin/main`, never from a local
+`main`: it may be stale, and it is often checked out in another worktree, which makes
+`git checkout main` fail outright.
+
+```bash
+git fetch origin
+git worktree add ~/Development/mgm-muc1-vntr-29 -b 29-fix-long-read-skip-warning origin/main
+```
+
+A session cannot follow itself into a worktree it creates, because the working directory is
+fixed for the session's lifetime. So either hand the path to a new session, or give the work
+to a subagent that gets its own worktree. Do not drive a second worktree through absolute
+paths from this one; the session's idea of the repository then disagrees with the branch the
+files are on, and every `git` call needs a `-C` that will eventually be forgotten.
+
+### Check the LFS fixtures in a new worktree
+
+A new worktree can hold Git LFS pointer files where the BAMs should be. Before running the
+suite in one:
+
+```bash
+head -c 40 tests/data/NA24149_MUC1_SRS.bam   # expect binary, not "version https://git-lfs..."
+git lfs pull                                 # only if it is a pointer
+```
+
+`git worktree add` normally runs the smudge filter and writes the real files, so this does
+not always bite; two agent sessions hit it on the same day. It is worth one command up front
+because the failure is misleading rather than obvious: every test that opens a BAM dies with
+`ValueError: file does not contain alignment data`, which reads like a corrupt fixture and
+not an undownloaded one.
+
 ## Commits and releases
 
 Conventional Commits, enforced on PR titles. PRs are squash-merged and the PR title
