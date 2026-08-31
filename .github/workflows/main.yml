@@ -6,29 +6,26 @@ on:
       - main
   pull_request:
 
-# No `apt-get install` step. Under uv this job installed libbz2-dev, libcairo-dev and
-# liblzma-dev before anything else could run, because pycairo had no Linux wheel and had to
-# be compiled against system cairo headers (#17). pycairo is gone entirely since #24, and
-# the pysam wheel bundles htslib, so the runner needs nothing but pixi itself.
+# No `apt-get install` step. The job used to install libbz2-dev, libcairo-dev and liblzma-dev
+# before anything else could run, because pycairo had no Linux wheel and had to be compiled
+# against system cairo headers; that is what pixi was adopted for (#17). pycairo is gone
+# since #37 and the pysam wheel bundles htslib, so every dependency is now a PyPI wheel and
+# the runner needs nothing but uv itself (#38).
 jobs:
   formatting:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install pixi
-        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          # `--locked` everywhere: a manifest change without a relocked file fails the job
-          # rather than being silently re-resolved. This is the same guarantee
-          # `uv run --locked` gave, and the reason there is exactly one lockfile.
-          locked: true
-          cache: true
-          environments: default
+          enable-cache: true
 
-      # Every step below is a Makefile entry point, run exactly as it is run locally. The
-      # tools come from `pixi.lock`, so this job cannot lint or type check against a
-      # different toolchain than a developer does (#9, #17).
+      # Every step below is a Makefile entry point, run exactly as it is run locally. Each
+      # one goes through `uv run --locked`, so a manifest change without a relocked file
+      # fails the job rather than being silently re-resolved, and this job cannot lint or
+      # type check against a different toolchain than a developer does (#9, #17, #38).
       - name: Check Formatting
         run: |
           make check-format
@@ -41,11 +38,10 @@ jobs:
         run: |
           make check-types
 
-  # The matrix that used to run 3.13 and 3.14 is a single 3.13 job. On linux-64 there is no
-  # way to resolve Python 3.14 without compiling pysam: it has no cp314 wheel on PyPI, and
-  # every bioconda pysam build for 3.14 on that platform requires the free-threaded ABI. See
-  # the long note in pyproject.toml. `requires-python = ">=3.13"` still permits 3.14, it is
-  # just untested.
+  # A single 3.13 job, from `.python-version`. The matrix that used to run 3.13 and 3.14 was
+  # dropped because 3.14 could not be resolved without compiling pysam; pysam 0.24.0 has since
+  # published cp314 wheels, so that reason is gone and only the scope of #38 keeps the leg
+  # out. See the note in pyproject.toml. `requires-python = ">=3.13"` still permits 3.14.
   testing:
     runs-on: ubuntu-latest
     steps:
@@ -53,12 +49,10 @@ jobs:
         with:
           lfs: true
 
-      - name: Install pixi
-        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          locked: true
-          cache: true
-          environments: default
+          enable-cache: true
 
       - name: Run tests
         run: |

@@ -1,58 +1,42 @@
-# Build stage: resolve the `prod` pixi environment from the committed lockfile.
+# Build stage: create /app/.venv from the committed lockfile.
 #
-# `prod` shares a solve group with `default` in pyproject.toml, so the versions baked in here
-# are the ones CI tested against, minus the dev tools. `--locked` fails on a lockfile stale
-# against the manifest rather than re-resolving, so the image is reproducible from the tag.
-FROM ghcr.io/prefix-dev/pixi:0.78.0-bookworm@sha256:2d9729658a777203a99b45103a120191d479b123d0a1edb06694e843ccc8000d AS build
+# `--locked` fails on a lockfile stale against the manifest rather than re-resolving, so the
+# versions baked in here are the ones CI tested against; `--no-dev` leaves the dev group out.
+# This is what the `prod` pixi environment and its solve group used to buy (#38).
+#
+# `--no-editable` installs the project into site-packages instead of leaving a .pth pointing
+# at /app/src. That is the reason the runtime stage copies the venv and nothing else.
+FROM python:3.13-slim@sha256:7ce4b6dfe35e55397b7cda544f8a13f191b7ae28dc5aad71fe664dbc9bc2623f AS build
+
+# uv ships as a static binary in its own image, so it is copied in rather than installed.
+COPY --from=ghcr.io/astral-sh/uv:0.11.8@sha256:3b7b60a81d3c57ef471703e5c83fd4aaa33abcd403596fb22ab07db85ae91347 /uv /bin/uv
 
 WORKDIR /app
 
-# README.md is here because `[project] readme = "README.md"`; the editable install of the
-# project fails without it.
-COPY pyproject.toml pixi.lock README.md ./
+# Bytecode is compiled at build time on purpose. Without it the interpreter recompiles the
+# imported half of numpy, pysam and biopython on every container start, and these containers
+# are one-shot, so the cost would be paid on every single run.
+#
+# The base image already carries the interpreter `.python-version` asks for; downloading a
+# second one would only make the image bigger.
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=never
+
+# README.md is here because `[project] readme = "README.md"`; building the project fails
+# without it. .python-version is here so uv resolves the same interpreter the tests ran on.
+COPY pyproject.toml uv.lock .python-version README.md ./
 COPY src ./src
 
-RUN pixi install --locked -e prod
+RUN uv sync --locked --no-dev --no-editable --no-cache
 
-# Strip what a runtime image cannot use. Measured on the first published image: this is
-# ~95 MB of a 572 MB total, none of it reachable from `mgm-muc1-vntr`.
-#
-#   include/       C headers, for building against the libraries, not running them
-#   conda-meta/    pixi and conda bookkeeping; nothing re-solves inside the image
-#   *.a            static archives, the shared objects are what get loaded
-#   share/gir-1.0  GObject introspection, needed by PyGObject bindings, not by pycairo
-#   share/locale   translations; the tool is English only
-#   share/terminfo the base image supplies its own
-#   share/{man,doc,info}
-#
-# __pycache__ is deliberately kept. Deleting it saves a further 30 MB but the interpreter
-# then recompiles the imported half of numpy, pysam and biopython on every container start,
-# and these containers are one-shot, so the cost is paid on every single run.
-ARG PREFIX=/app/.pixi/envs/prod
-RUN find "$PREFIX" -name '*.a' -type f -delete \
-    && rm -rf "$PREFIX/include" \
-              "$PREFIX/conda-meta" \
-              "$PREFIX/share/gir-1.0" \
-              "$PREFIX/share/locale" \
-              "$PREFIX/share/terminfo" \
-              "$PREFIX/share/man" \
-              "$PREFIX/share/doc" \
-              "$PREFIX/share/info"
+# Runtime stage. The venv is copied to the path it was built at, which keeps the console
+# script's shebang valid without rewriting it, and a plain exec keeps signal handling and
+# exit codes intact.
+FROM python:3.13-slim@sha256:7ce4b6dfe35e55397b7cda544f8a13f191b7ae28dc5aad71fe664dbc9bc2623f AS runtime
 
-# Runtime stage. Conda prefixes are not relocatable, so the environment has to land on the
-# same path it was built at. The source tree comes along because pyproject.toml declares the
-# project as an *editable* pypi dependency, which leaves a .pth in site-packages pointing at
-# /app/src rather than copying the package into the environment.
-FROM debian:bookworm-slim AS runtime
+COPY --from=build /app/.venv /app/.venv
 
-COPY --from=build /app/.pixi/envs/prod /app/.pixi/envs/prod
-COPY --from=build /app/src /app/src
-COPY --from=build /app/pyproject.toml /app/README.md /app/
-
-# Activating by PATH rather than by sourcing `pixi shell-hook`. conda-forge binaries find
-# their libraries through RPATH, so no LD_LIBRARY_PATH is needed, and a plain exec keeps
-# signal handling and exit codes intact.
-ENV PATH="/app/.pixi/envs/prod/bin:${PATH}"
+ENV PATH="/app/.venv/bin:${PATH}"
 
 # Reference FASTAs and BAMs are bind-mounted, never baked in; /data is where to mount them.
 WORKDIR /data

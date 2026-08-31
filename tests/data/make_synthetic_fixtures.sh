@@ -3,12 +3,12 @@
 # Regenerates the synthetic MUC1 fixtures in this directory. Not run by the test suite:
 # the outputs are committed via Git LFS and this script records how they were produced.
 #
-#   pixi run -e fixtures make-fixtures [workdir]
+#   tests/data/make_synthetic_fixtures.sh [workdir]
 #
-# Every tool comes from the `fixtures` pixi environment, so the simulator, aligner and
-# samtools versions are pinned in pixi.lock. Passing a workdir lets a re-run reuse the bwa
-# index, which costs about eight minutes and 417 MB against the mostly-N masked reference.
-# Index files are intermediates and are not committed.
+# muconeup, bwa, wgsim and samtools have to be on PATH; see tests/data/README.md, which also
+# records the MucOneUp commit that pixi.lock used to pin. Passing a workdir lets a re-run
+# reuse the bwa index, which costs about eight minutes and 417 MB against the mostly-N
+# masked reference. Index files are intermediates and are not committed.
 #
 # bwa rather than minimap2: NA24149_MUC1_SRS.bam was aligned with bwa-mem and the fixtures
 # should share its provenance. On identical reads minimap2 also called a 48 bp deletion
@@ -16,7 +16,7 @@
 # MD tags by default, which the analysis requires via pysam's get_reference_sequence().
 set -euo pipefail
 
-readonly MUCONEUP_REF=v0.44.4  # keep in step with the pin in [tool.pixi.feature.fixtures.pypi-dependencies]
+readonly MUCONEUP_REF=v0.44.4  # keep in step with the installed muconeup, see tests/data/README.md
 readonly REPEATS=60            # VNTR repeat count per haplotype
 readonly TARGET=1,25           # haplotype 1, repeat 25: an 'X' unit, which these mutations require
 readonly MUCONEUP_SEED=7
@@ -37,7 +37,7 @@ readonly REFERENCE_GZ="${DATA_DIR}/GRCh37_1_MUC1_masked.fa.gz"
 
 for tool in muconeup bwa wgsim samtools git; do
   command -v "${tool}" > /dev/null || {
-    echo "${tool} not on PATH; run this as: pixi run -e fixtures make-fixtures" >&2
+    echo "${tool} not on PATH; see tests/data/README.md for how to install it" >&2
     exit 1
   }
 done

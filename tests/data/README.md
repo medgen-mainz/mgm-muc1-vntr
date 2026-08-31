@@ -100,11 +100,25 @@ Simulated MUC1 haplotypes with a known variant, so the expected analysis result 
 by construction rather than characterised after the fact. Regenerate with
 
 ```
-pixi run -e fixtures make-fixtures
+tests/data/make_synthetic_fixtures.sh
 ```
 
-which runs `make_synthetic_fixtures.sh`. Tool versions come from the `fixtures` pixi
-environment and are pinned in `pixi.lock`.
+The tools it needs are not in `uv.lock`. bwa, samtools and wgsim are bioconda-only and have
+no PyPI distribution, so the `fixtures` pixi environment that used to supply them went with
+pixi in #38. Put them on `PATH` first, from a conda-family environment or your distribution,
+and install the simulator:
+
+```
+micromamba create -n muc1-fixtures -c conda-forge -c bioconda bwa samtools wgsim
+uv tool install git+https://github.com/berntpopp/MucOneUp.git@v0.44.4
+```
+
+Channel order is load-bearing: `-c bioconda -c conda-forge` resolves an ancient ncurses and
+samtools then dies with `libncurses.so.5: cannot open shared object file`.
+
+`pixi.lock` used to record the simulator commit behind the tag, which a mutable tag does not.
+It is `7db048f226392ed25cacb732ca5c1d88d4343350`; check it out explicitly if a regenerated
+fixture has to be traceable to an exact MucOneUp version.
 
 Each is heterozygous: MucOneUp mutates haplotype 1 of a diploid pair and leaves haplotype
 2 alone. 60 repeats per haplotype, hg19 flanks, 10,000 read pairs of 150 bp from `wgsim`

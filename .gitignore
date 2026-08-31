@@ -69,6 +69,3 @@ target/
 
 # PyCharm
 .idea/
-
-# pixi environments; the lockfile is committed, the installed prefixes are not.
-.pixi/

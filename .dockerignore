@@ -1,9 +1,10 @@
-# The build only needs pyproject.toml, pixi.lock, README.md and src/. Everything else is
-# excluded so a local `docker build` does not ship the repo, the LFS fixtures or a host
-# pixi prefix into the build context.
+# The build only needs pyproject.toml, uv.lock, .python-version, README.md and src/.
+# Everything else is excluded so a local `docker build` does not ship the repo, the LFS
+# fixtures or a host .venv into the build context.
 *
 
 !pyproject.toml
-!pixi.lock
+!uv.lock
+!.python-version
 !README.md
 !src/
