@@ -11,7 +11,12 @@ import xml.etree.ElementTree as ElementTree
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from mgm_muc1_vntr.srs_analysis import Config, ShortReadResult, short_read_analysis
+from mgm_muc1_vntr.srs_analysis import (
+    PILEUP_ADVANCE_EM,
+    Config,
+    ShortReadResult,
+    short_read_analysis,
+)
 
 DATA_DIR = pathlib.Path(__file__).parent / "data"
 BAM_PATH = DATA_DIR / "NA24149_MUC1_SRS.bam"
@@ -192,3 +197,48 @@ def test_no_pileup_svg_without_a_path(tmp_path: pathlib.Path) -> None:
     short_read_analysis(config=make_config(tmp_path))
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_pileup_svg_preserves_alignment_padding(tmp_path: pathlib.Path) -> None:
+    """Every pileup line keeps the padding that aligns its columns.
+
+    This is the regression guard for the SVG writer (#24). The layout is carried
+    entirely by the ``rjust``/``ljust`` padding inside each line, and SVG collapses
+    leading and repeated spaces unless ``xml:space="preserve"`` is set. Dropping that
+    attribute still produces a valid, plausible-looking SVG in which every line is
+    flush left and the pileup means nothing, so structural assertions do not catch it.
+    """
+    svg_path = tmp_path / "pileup.svg"
+    short_read_analysis(config=make_config(tmp_path, pileup_svg_path=svg_path))
+
+    root = ElementTree.parse(svg_path).getroot()
+    texts = root.iter("{http://www.w3.org/2000/svg}text")
+    padded = [t for t in texts if (t.text or "").startswith(" ") or "  " in (t.text or "")]
+
+    assert padded, "expected at least one line to carry alignment padding"
+    for element in padded:
+        space = element.get("{http://www.w3.org/XML/1998/namespace}space")
+        assert space == "preserve", f"padding would collapse on line {element.text!r}"
+
+
+def test_pileup_svg_lines_sit_on_the_character_grid(tmp_path: pathlib.Path) -> None:
+    """Each line's declared length is its character count times the advance width.
+
+    Pins the relationship between ``PILEUP_ADVANCE_EM`` and the ``textLength`` the
+    writer emits, so changing the font family without changing the advance is a test
+    failure rather than a silent column drift.
+    """
+    svg_path = tmp_path / "pileup.svg"
+    short_read_analysis(config=make_config(tmp_path, pileup_svg_path=svg_path))
+
+    root = ElementTree.parse(svg_path).getroot()
+    group = root.find("{http://www.w3.org/2000/svg}g")
+    assert group is not None
+    advance = float(group.get("font-size", "0")) * PILEUP_ADVANCE_EM
+    assert advance > 0
+
+    lines = list(group.iter("{http://www.w3.org/2000/svg}text"))
+    assert lines, "expected the fixture to produce at least one line"
+    for element in lines:
+        expected = len(element.text or "") * advance
+        assert float(element.get("textLength", "-1")) == pytest.approx(expected)

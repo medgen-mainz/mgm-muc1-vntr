@@ -7,9 +7,9 @@ on:
   pull_request:
 
 # No `apt-get install` step. Under uv this job installed libbz2-dev, libcairo-dev and
-# liblzma-dev before anything else could run, because pycairo has no Linux wheel and had to
-# be compiled against system cairo headers. pixi takes pycairo from conda-forge as a
-# prebuilt binary, so the runner needs nothing but pixi itself (#17).
+# liblzma-dev before anything else could run, because pycairo had no Linux wheel and had to
+# be compiled against system cairo headers (#17). pycairo is gone entirely since #24, and
+# the pysam wheel bundles htslib, so the runner needs nothing but pixi itself.
 jobs:
   formatting:
     runs-on: ubuntu-latest
@@ -42,10 +42,10 @@ jobs:
           make check-types
 
   # The matrix that used to run 3.13 and 3.14 is a single 3.13 job. On linux-64 there is no
-  # way to resolve Python 3.14 without compiling one of the two binary dependencies: pysam
-  # has no cp314 wheel on PyPI, and every bioconda pysam build for 3.14 on that platform
-  # requires the free-threaded ABI, for which conda-forge has no pycairo. See the long note
-  # in pyproject.toml. `requires-python = ">=3.13"` still permits 3.14, it is just untested.
+  # way to resolve Python 3.14 without compiling pysam: it has no cp314 wheel on PyPI, and
+  # every bioconda pysam build for 3.14 on that platform requires the free-threaded ABI. See
+  # the long note in pyproject.toml. `requires-python = ">=3.13"` still permits 3.14, it is
+  # just untested.
   testing:
     runs-on: ubuntu-latest
     steps:

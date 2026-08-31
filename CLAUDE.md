@@ -113,11 +113,12 @@ Two invariants worth knowing before you touch the build:
   `pyproject.toml` declares `dynamic = ["version"]` and derives it. Never add a
   static `version` to `[project]`.
 
-There are no system libraries to install. pycairo comes from conda-forge as a prebuilt
-binary and pysam from a PyPI wheel with htslib bundled in, so the bzip2, cairo and lzma
-development packages a checkout used to need are gone. If you find yourself adding an
-`apt-get install` to make something build, that is a sign the dependency belongs on the
-conda side of `pyproject.toml` instead. Checkouts do still need `git lfs` installed to get
+There are no system libraries to install. pysam comes from a PyPI wheel with htslib bundled
+in, and pycairo, which was the reason for the cairo headers, is gone since #24, so the bzip2,
+cairo and lzma development packages a checkout used to need are gone with it. `pixi.lock` now
+has no conda-side package at all. If you find yourself adding an `apt-get install` to make
+something build, that is a sign the dependency belongs on the conda side of `pyproject.toml`
+instead. Checkouts do still need `git lfs` installed to get
 the BAM fixtures; without it you get pointer files and any test that opens one fails.
 
 Python 3.14 is permitted by `requires-python` but not covered by CI; the reason is a

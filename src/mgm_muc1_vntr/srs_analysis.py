@@ -6,7 +6,6 @@ import sys
 import typing
 from collections import Counter
 
-import cairo
 import pydantic
 import pysam
 from loguru import logger
@@ -478,6 +477,19 @@ def print_short_read_pileups(
                 )
 
 
+#: Font stack for the pileup SVG. Every family listed advances 0.6 em per glyph, which is
+#: what cairo's "Courier" resolved to, so the glyph grid is unchanged.
+PILEUP_FONT_FAMILY = "DejaVu Sans Mono, Liberation Mono, Courier New, Courier, monospace"
+
+#: Advance width per character, in ems, for every family in :data:`PILEUP_FONT_FAMILY`.
+PILEUP_ADVANCE_EM = 0.6
+
+
+def _svg_escape(text: str) -> str:
+    """Escape ``text`` for use as XML character data."""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def generate_pileup_svg(
     *,
     short_read_results: list[ShortReadResult],
@@ -526,13 +538,22 @@ def generate_pileup_svg(
     svg_width = max_width * char_width + 2 * margin
     svg_height = total_height + margin
 
-    # Create Cairo surface and context
-    surface = cairo.SVGSurface(str(output_path), svg_width, svg_height)
-    ctx = cairo.Context(surface)
+    advance = font_size * PILEUP_ADVANCE_EM
+    lines: list[str] = []
 
-    # Set up font
-    ctx.select_font_face("Courier", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-    ctx.set_font_size(font_size)
+    def emit(text: str, y: float, fill: str) -> None:
+        """Append one line of monospace text on the character grid.
+
+        ``xml:space`` is required: the alignment relies on the padding produced by
+        ``rjust``/``ljust``, and SVG collapses leading and repeated spaces without it.
+        ``textLength`` pins the line to an exact multiple of the advance width so the
+        columns survive a viewer substituting a font whose advance is not 0.6 em.
+        """
+        lines.append(
+            f'<text x="{margin}" y="{y:g}" fill="{fill}" '
+            f'textLength="{len(text) * advance:g}" lengthAdjust="spacing" '
+            f'xml:space="preserve">{_svg_escape(text)}</text>'
+        )
 
     y_pos = margin + font_size
 
@@ -542,9 +563,6 @@ def generate_pileup_svg(
                 rep_var = result.repeat_variation
                 cons_left = group.consensus_left or group.longest_left
                 cons_right = group.consensus_right or group.longest_right
-
-                # Header information as key/value pairs
-                ctx.set_source_rgb(0.2, 0.2, 0.2)  # Dark gray
 
                 # Extract filename from path
                 filename = os.path.basename(result.path_bam)
@@ -560,8 +578,7 @@ def generate_pileup_svg(
                 ]
 
                 for header_line in header_lines:
-                    ctx.move_to(margin, y_pos)
-                    ctx.show_text(header_line)
+                    emit(header_line, y_pos, "#333333")  # Dark gray
                     y_pos += line_height
 
                 y_pos += line_height // 2  # Small gap before alignment
@@ -571,23 +588,31 @@ def generate_pileup_svg(
                 max_right = max([len(cons_right)] + [len(ctx.right_flank) for ctx in group.contexts])
 
                 # Consensus line
-                ctx.set_source_rgb(0.0, 0.0, 0.8)  # Blue for consensus
                 cons_text = f"CONS {cons_left.rjust(max_left)} [ {rep_var.sequence} ] {cons_right.ljust(max_right)}"
-                ctx.move_to(margin, y_pos)
-                ctx.show_text(cons_text)
+                emit(cons_text, y_pos, "#0000cc")  # Blue for consensus
                 y_pos += line_height
 
                 # Read lines
                 sorted_contexts = sorted(group.contexts, key=lambda c: (-len(c.left_flank), c.read_name))
                 for context in sorted_contexts:
-                    ctx.set_source_rgb(0.4, 0.4, 0.4)  # Gray for reads
-                    read_text = f"r    {context.left_flank.rjust(max_left)} [ {rep_var.sequence} ] {context.right_flank.ljust(max_right)}"
-                    ctx.move_to(margin, y_pos)
-                    ctx.show_text(read_text)
+                    read_text = (
+                        f"r    {context.left_flank.rjust(max_left)} [ {rep_var.sequence} ] "
+                        f"{context.right_flank.ljust(max_right)}"
+                    )
+                    emit(read_text, y_pos, "#666666")  # Gray for reads
                     y_pos += line_height
 
                 y_pos += margin // 2  # Extra space between groups
 
-    # Finish and save
-    surface.finish()
+    body = "\n".join(lines)
+    output_path.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{svg_width:g}" height="{svg_height:g}" '
+        f'viewBox="0 0 {svg_width:g} {svg_height:g}">\n'
+        f'<g font-family="{PILEUP_FONT_FAMILY}" font-size="{font_size}">\n'
+        f"{body}\n"
+        "</g>\n"
+        "</svg>\n",
+        encoding="utf-8",
+    )
     logger.info(f"SVG pileup visualization saved to {output_path}")
