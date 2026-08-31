@@ -19,8 +19,6 @@ class Config(pydantic.BaseModel):
     genome_release: GenomeRelease = "GRCh38"
     #: Path to reference genome in FASTA format.
     reference_genome: pathlib.Path
-    #: Path to output directory.
-    output_dir: pathlib.Path
     #: Flanking region to trim.
     trim_flank: int
     #: Required anchor length for spanning reads.
@@ -121,8 +119,6 @@ def long_read_analysis(
             and reference_end > interval.end + config.anchor_length
         ):
             spanning_read_count += 1
-            # as_motifs = spanning_to_motifs(line.query_sequence or "")
-            # print(f"# {line.query_name} spanning, motifs: {' '.join(as_motifs)}")
 
         read_sequence = line.query_sequence
         assert read_sequence, f"Read sequence of {line.query_name} is empty"
@@ -141,7 +137,6 @@ def long_read_analysis(
     if debug:
         print("# --\n")
 
-    # if alt_read_count:
     print(f"#### ref_marker = -e '{ref_marker}' -e '{revcomp(ref_marker)}'")
     print(f"#### alt_marker = -e '{alt_marker}' -e '{revcomp(alt_marker)}'")
 

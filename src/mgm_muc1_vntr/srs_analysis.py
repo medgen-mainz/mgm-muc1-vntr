@@ -22,8 +22,6 @@ class Config(pydantic.BaseModel):
     genome_release: GenomeRelease = "GRCh37"
     #: Path to reference genome in FASTA format.
     reference_genome: pathlib.Path
-    #: Path to output directory.
-    output_dir: pathlib.Path
     #: Minimum support for variant calls.
     min_support_var: int
     #: Flanking region to trim.
@@ -362,9 +360,7 @@ def print_short_read_result_header():
     )
 
 
-def print_short_read_result(
-    *, short_read_result: ShortReadResult, min_support_consensus: int, file: typing.TextIO | None = None
-):
+def print_short_read_result(*, short_read_result: ShortReadResult, file: typing.TextIO | None = None):
     # Resolved per call: as a default it would bind the `sys.stdout` live at import time.
     file = file or sys.stdout
     print(
@@ -391,8 +387,7 @@ def print_short_read_pileups(
 ):
     # Resolved per call: as a default it would bind the `sys.stdout` live at import time.
     file = file or sys.stdout
-    for group_idx, group in enumerate(short_read_result.flank_groups):
-        _ = group_idx
+    for group in short_read_result.flank_groups:
         if group.count >= min_support_consensus:
             rep_var = short_read_result.repeat_variation
             # Header summary line

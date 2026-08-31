@@ -41,7 +41,6 @@ ALL_CASES = [case[0] for case in DETECTED_CASES] + UNDETECTED_CASES
 
 def make_config(
     fixture: str,
-    output_dir: pathlib.Path,
     *,
     min_support_var: int = DEFAULT_MIN_SUPPORT_VAR,
 ) -> Config:
@@ -50,7 +49,6 @@ def make_config(
         input_bam=DATA_DIR / f"{fixture}.bam",
         genome_release="GRCh37",
         reference_genome=REFERENCE_PATH,
-        output_dir=output_dir,
         min_support_var=min_support_var,
         trim_flank=DEFAULT_TRIM_FLANK,
         min_support_consensus=DEFAULT_MIN_SUPPORT_CONSENSUS,
@@ -59,7 +57,6 @@ def make_config(
 
 @pytest.mark.parametrize(("fixture", "var_type", "length", "sequence", "support", "shifts_frame"), DETECTED_CASES)
 def test_expected_variant_is_called(
-    tmp_path: pathlib.Path,
     fixture: str,
     var_type: str,
     length: int,
@@ -68,7 +65,7 @@ def test_expected_variant_is_called(
     shifts_frame: bool,
 ) -> None:
     """The analysis finds exactly the variant the fixture was built to carry."""
-    results = short_read_analysis(config=make_config(fixture, tmp_path))
+    results = short_read_analysis(config=make_config(fixture))
 
     assert len(results) == 1
     (result,) = results
@@ -81,19 +78,19 @@ def test_expected_variant_is_called(
 
 
 @pytest.mark.parametrize(("fixture", "shifts_frame"), [(c[0], c[5]) for c in DETECTED_CASES])
-def test_frameshift_status_matches_the_construction(tmp_path: pathlib.Path, fixture: str, shifts_frame: bool) -> None:
+def test_frameshift_status_matches_the_construction(fixture: str, shifts_frame: bool) -> None:
     """A frameshifting fixture yields a frameshifting call, an in-frame one does not.
 
     This is the assertion that matters clinically, stated separately from the exact call so
     a failure says which of the two went wrong.
     """
-    results = short_read_analysis(config=make_config(fixture, tmp_path))
+    results = short_read_analysis(config=make_config(fixture))
     frameshifting = [r for r in results if len(r.repeat_variation.sequence) % 3 != 0]
 
     assert bool(frameshifting) is shifts_frame
 
 
-def test_dupc_is_in_the_bam_but_never_reported(tmp_path: pathlib.Path) -> None:
+def test_dupc_is_in_the_bam_but_never_reported() -> None:
     """The pathogenic dupC allele is present in the reads and reported by nothing.
 
     This pins a known limitation rather than desired behaviour. `short_read_analysis`
@@ -120,14 +117,14 @@ def test_dupc_is_in_the_bam_but_never_reported(tmp_path: pathlib.Path) -> None:
     ), "no dupC read carries another indel, so all of them fail the >= 2 read filter"
 
     for min_support_var in (1, DEFAULT_MIN_SUPPORT_VAR):
-        results = short_read_analysis(config=make_config("synth_dupC", tmp_path, min_support_var=min_support_var))
+        results = short_read_analysis(config=make_config("synth_dupC", min_support_var=min_support_var))
         assert results == [], f"known limitation, nothing is reported at {min_support_var=}"
 
 
 @pytest.mark.parametrize("fixture", ALL_CASES)
-def test_support_accounting_is_consistent(tmp_path: pathlib.Path, fixture: str) -> None:
+def test_support_accounting_is_consistent(fixture: str) -> None:
     """The invariants asserted for the real fixture hold for the synthetic ones too."""
-    results: list[ShortReadResult] = short_read_analysis(config=make_config(fixture, tmp_path))
+    results: list[ShortReadResult] = short_read_analysis(config=make_config(fixture))
 
     for result in results:
         counts = [group.count for group in result.flank_groups]

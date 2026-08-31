@@ -74,7 +74,6 @@ def run(
     ] = "GRCh38",
     long_read_analysis_trim_flank: Annotated[int, typer.Option(help="Trim flank size for long read analysis")] = 100,
     long_read_anchor_length: Annotated[int, typer.Option(help="Required anchor length for spanning reads")] = 50,
-    output_dir: Annotated[pathlib.Path, typer.Option(help="Output directory")] = pathlib.Path("."),
     min_support_var: Annotated[int, typer.Option(help="Minimum number of reads supporting a variant")] = 3,
     min_support_consensus: Annotated[int, typer.Option(help="Minimum number of reads supporting a consensus")] = 2,
     short_read_analysis_trim_flank: Annotated[int, typer.Option(help="Trim flank size for short read analysis")] = 150,
@@ -106,7 +105,6 @@ def run(
             input_bam=short_read_bam,
             genome_release=short_read_release,
             reference_genome=short_read_reference,
-            output_dir=output_dir,
             min_support_var=min_support_var,
             min_support_consensus=min_support_consensus,
             trim_flank=short_read_analysis_trim_flank,
@@ -118,10 +116,7 @@ def run(
     for no, short_read_result in enumerate(short_read_results):
         if no == 0:
             print_short_read_result_header()
-        print_short_read_result(
-            short_read_result=short_read_result,
-            min_support_consensus=min_support_consensus,
-        )
+        print_short_read_result(short_read_result=short_read_result)
         if print_pileups:
             print_short_read_pileups(short_read_result=short_read_result, min_support_consensus=min_support_consensus)
 
@@ -137,7 +132,6 @@ def run(
                 input_bam=long_read_bam,
                 genome_release=long_read_release,
                 reference_genome=long_read_reference,
-                output_dir=output_dir,
                 trim_flank=long_read_analysis_trim_flank,
                 anchor_length=long_read_anchor_length,
             ),
