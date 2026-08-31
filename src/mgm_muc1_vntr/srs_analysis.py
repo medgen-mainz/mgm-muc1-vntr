@@ -364,8 +364,10 @@ def print_short_read_result_header():
 
 
 def print_short_read_result(
-    *, short_read_result: ShortReadResult, min_support_consensus: int, file: typing.TextIO = sys.stdout
+    *, short_read_result: ShortReadResult, min_support_consensus: int, file: typing.TextIO | None = None
 ):
+    # Resolved per call: as a default it would bind the `sys.stdout` live at import time.
+    file = file or sys.stdout
     print(
         ",".join(
             map(
@@ -386,8 +388,10 @@ def print_short_read_result(
 
 
 def print_short_read_pileups(
-    *, short_read_result: ShortReadResult, min_support_consensus: int, file: typing.TextIO = sys.stdout
+    *, short_read_result: ShortReadResult, min_support_consensus: int, file: typing.TextIO | None = None
 ):
+    # Resolved per call: as a default it would bind the `sys.stdout` live at import time.
+    file = file or sys.stdout
     for group_idx, group in enumerate(short_read_result.flank_groups):
         _ = group_idx
         if group.count >= min_support_consensus:

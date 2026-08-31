@@ -55,29 +55,37 @@ def test_verbosity_flags(tmp_path, flag):
     assert result.exit_code == 0, result.output
 
 
-def test_short_read_csv_is_unreachable_from_the_runner(tmp_path):
-    """The CSV row is missing from `result.output`, and that is a source bug.
+def test_short_read_csv_row_reaches_the_runner(tmp_path):
+    """The CSV row lands in `result.output`, so whatever holds stdout at call time gets it.
 
-    `print_short_read_result` and `print_short_read_pileups` declare
-    `file: typing.TextIO = sys.stdout`, which binds whatever `sys.stdout` was when the
-    module was imported. Nothing installed later can intercept them: not `CliRunner`, not
-    `contextlib.redirect_stdout`, not `capsys`, not `capfd`. Under pytest the rows land in
-    the session-wide capture and show up as "Captured stdout call" on failure.
-
-    Making the default `None` and resolving `sys.stdout` per call would fix it. Until then
-    the row content is asserted in `test_srs_analysis.py`, which passes `file=` explicitly,
-    and this test pins the CLI symptom.
+    `print_short_read_result` resolves `sys.stdout` per call. Bound at import time
+    instead, the row would go to the interpreter's original stdout and nothing installed
+    later could intercept it: not `CliRunner`, not `contextlib.redirect_stdout`, not
+    `capsys`, not `capfd`.
     """
     result = runner.invoke(app, srs_args(output_dir=tmp_path))
     assert result.exit_code == 0, result.output
-    assert "NA24149_MUC1_SRS.bam,del" not in result.output
+    csv_rows = [line for line in result.output.splitlines() if line.startswith("NA24149_MUC1_SRS.bam,")]
+    assert len(csv_rows) == 1
+    # The call is GGTGGAGCCCGGGGCCGG in reference orientation; the CSV reports transcript.
+    assert csv_rows[0].split(",") == [
+        "NA24149_MUC1_SRS.bam",
+        "del",
+        "CCGGCCCCGGGCTCCACC",
+        "3",
+        "3",
+        str(SRS_BAM),
+    ]
 
 
 @pytest.mark.parametrize("flag", [[], ["--print-pileups"]])
-def test_print_pileups_flag_is_accepted(tmp_path, flag):
-    """Covers the `--print-pileups` branch; its output is asserted in `test_srs_analysis.py`."""
+def test_print_pileups_flag_controls_the_pileup_output(tmp_path, flag):
+    """The flag decides whether the pileup reaches stdout; one read line per grouped read."""
     result = runner.invoke(app, srs_args(output_dir=tmp_path) + flag)
     assert result.exit_code == 0, result.output
+    lines = result.output.splitlines()
+    assert sum(line.startswith("## CONS") for line in lines) == (1 if flag else 0)
+    assert sum(line.startswith("##   r") for line in lines) == (3 if flag else 0)
 
 
 def test_pileup_svg_option_writes_the_file(tmp_path):
