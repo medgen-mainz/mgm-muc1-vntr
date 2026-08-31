@@ -1,0 +1,53 @@
+# serializer version: 1
+# name: test_results_match_snapshot
+  list([
+    dict({
+      'flank_groups': list([
+        dict({
+          'consensus_left': 'CCGGCCTGGTGTCCGGGGCCGAGGTGACACCGTGGGCTTGGGGGGC',
+          'consensus_right': 'GGTGGAGCCCGGGGCCCGCCTGGTGTCCGGGGCCGAGGTGACACCGTGGGCTGCGGGCGCGGTGGAGCCCGGGGCGGGCCTGGTGTCCGGGGCCGAGGTGACAC',
+          'contexts': list([
+            dict({
+              'left_flank': 'CCGGCCTGGTGTCCGGGGCCGAGGTGACACCGTGGGCTTGGGGGGC',
+              'read_name': 'AV261503:EXOMEPLUS-Av3-1007:2548489459:1:10804:4739:2481',
+              'repeat_variation': dict({
+                'sequence': 'GGTGGAGCCCGGGGCCGG',
+                'var_type': 'del',
+              }),
+              'right_flank': 'GGTGGAGCCCGGGGCCCGCCTGGTGTCCGGGGCCGAGGTGACACCGTGGGCTGCGGGCGCGGTGGAGCCCGGGGCGGGCCTGGTGTCCGGAGCCGAGGTGACAC',
+            }),
+            dict({
+              'left_flank': 'GCCTGGTGTCCGGGGCCGAGGTGACACCGTGGGCTTGGGGGGC',
+              'read_name': 'AV261503:EXOMEPLUS-Av3-1007:2548489459:2:10905:1931:0712',
+              'repeat_variation': dict({
+                'sequence': 'GGTGGAGCCCGGGGCCGG',
+                'var_type': 'del',
+              }),
+              'right_flank': 'GGTGGAGCCCGGGGCCCGCCTGGTGTCCGGGGCCGAGGTGACACCGTGGGCTGCGGGCGCGGTGGAGCCCGGGGCGGGCCTGGTGTCCGGGGCCGAGGTGACACCGT',
+            }),
+            dict({
+              'left_flank': 'GGAGCCCCGGGCCGGCCTGGTGTCCGGGGACCAGGTGACACCGTGGGCTTGGGGGGC',
+              'read_name': 'AV261503:EXOMEPLUS-Av3-1007:2548489459:2:20904:1340:0080',
+              'repeat_variation': dict({
+                'sequence': 'GGTGGAGCCCGGGGCCGG',
+                'var_type': 'del',
+              }),
+              'right_flank': 'GGTGGAGCCCGGGGCCCGCCTGGTGTCCGGGGCCGGGGTGACACCGTGGGCTAGGGGCGCGGTGGAGCCCGGGGCGGGCCTGGTGTCCGGGGC',
+            }),
+          ]),
+          'count': 3,
+          'example_read': 'AV261503:EXOMEPLUS-Av3-1007:2548489459:2:20904:1340:0080',
+          'longest_left': 'GGAGCCCCGGGCCGGCCTGGTGTCCGGGGACCAGGTGACACCGTGGGCTTGGGGGGC',
+          'longest_right': 'GGTGGAGCCCGGGGCCCGCCTGGTGTCCGGGGCCGAGGTGACACCGTGGGCTGCGGGCGCGGTGGAGCCCGGGGCGGGCCTGGTGTCCGGGGCCGAGGTGACACCGT',
+        }),
+      ]),
+      'path_bam': 'NA24149_MUC1_SRS.bam',
+      'raw_support': 3,
+      'repeat_variation': dict({
+        'sequence': 'GGTGGAGCCCGGGGCCGG',
+        'var_type': 'del',
+      }),
+      'support': 3,
+    }),
+  ])
+# ---
