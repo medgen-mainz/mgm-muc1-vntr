@@ -184,13 +184,16 @@ def test_pileup_svg_is_written(tmp_path: pathlib.Path) -> None:
     assert root.tag.rpartition("}")[2] == "svg"
 
 
-def test_no_pileup_svg_without_a_path(tmp_path: pathlib.Path) -> None:
-    """Nothing is written when no SVG path is configured.
+def test_no_pileup_svg_without_a_path(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The analysis writes no file at all when ``pileup_svg_path`` is unset.
 
-    The pileup SVG is the only file the analysis writes and ``pileup_svg_path`` is the
-    only thing that names it, so leaving it unset has to leave the directory the sibling
-    tests write their SVG into empty.
+    The working directory is moved into ``tmp_path`` first, so the assertion covers the one
+    place an unnamed output could plausibly land. Without the ``chdir`` this would assert
+    that an empty directory nobody passed to the analysis is still empty, which is true of
+    any code at all.
     """
+    monkeypatch.chdir(tmp_path)
+
     short_read_analysis(config=make_config())
 
     assert list(tmp_path.iterdir()) == []
