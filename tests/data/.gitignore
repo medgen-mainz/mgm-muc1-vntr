@@ -1,2 +1,9 @@
+# Local working fixtures stay out of the repository by default: a full BAM is far too
+# large to commit, and it is easy to drop one here while debugging.
 *.bam
 *.bai
+
+# Fixtures that are deliberately part of the test suite are negated individually, so
+# adding one is always an explicit act. They are stored via Git LFS, see /.gitattributes.
+!NA24149_MUC1_SRS.bam
+!NA24149_MUC1_SRS.bam.bai

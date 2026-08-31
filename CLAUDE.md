@@ -85,7 +85,9 @@ MUC1 VNTR analysis for short-read and long-read sequencing data. A Typer CLI
 - `src/mgm_muc1_vntr/lrs_analysis.py` long-read analysis
 - `src/mgm_muc1_vntr/common.py` shared helpers
 - `src/mgm_muc1_vntr/version.py` the version literal, see below
-- `tests/` pytest suite; `tests/data/` holds small BAM fixtures, committed directly
+- `tests/` pytest suite; `tests/data/` holds BAM fixtures stored in Git LFS. Local
+  working BAMs are gitignored; a fixture that belongs to the suite is negated
+  explicitly in `tests/data/.gitignore`, so committing one is always deliberate
 
 ## Development workflow
 
@@ -109,7 +111,8 @@ Two invariants worth knowing before you touch the build:
   static `version` to `[project]`.
 
 Building the C extensions needs the system libraries they link against: bzip2,
-cairo and lzma.
+cairo and lzma. Checkouts need `git lfs` installed to get the BAM fixtures; without
+it you get pointer files and any test that opens one fails.
 
 ## Commits and releases
 
