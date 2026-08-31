@@ -21,3 +21,9 @@
 !HG003_MUC1_GRCh37_ONT.bam.bai
 !HG003_MUC1_GRCh38_ONT.bam
 !HG003_MUC1_GRCh38_ONT.bam.bai
+!synth_insCCCC.bam
+!synth_insCCCC.bam.bai
+!synth_insCCC_benign.bam
+!synth_insCCC_benign.bam.bai
+!synth_dupC.bam
+!synth_dupC.bam.bai

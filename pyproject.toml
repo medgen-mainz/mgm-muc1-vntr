@@ -129,11 +129,37 @@ python = { version = "3.13.*", build = "*_cp313" }
 # so 3.14 is still permitted, it is simply no longer covered by CI. Restoring it is a
 # four-line change once either upstream ships a usable 3.14 build for linux-64.
 
+# Fixture generation only. Not part of `default`, so a normal checkout does not pay for it.
+# bwa, samtools and wgsim are bioconda-only; conda-forge is listed first so it keeps priority
+# for shared libraries. Getting that order wrong resolves an ancient ncurses and samtools
+# dies with `libncurses.so.5: cannot open shared object file`.
+#
+# linux-64 only: the fixtures are generated once by a maintainer, and pinning the other
+# platforms would force the solver to find bwa builds that need not exist.
+[tool.pixi.feature.fixtures]
+channels = ["conda-forge", "bioconda"]
+platforms = ["linux-64"]
+
+[tool.pixi.feature.fixtures.dependencies]
+python = "3.13.*"
+bwa = ">=0.7.19"
+samtools = ">=1.21"
+wgsim = "*"
+
+# MucOneUp is the haplotype simulator. Pinned to a tag, and the lockfile records the commit,
+# so a regenerated fixture is traceable to an exact simulator version.
+[tool.pixi.feature.fixtures.pypi-dependencies]
+muc-one-up = { git = "https://github.com/berntpopp/MucOneUp.git", tag = "v0.44.4" }
+
+[tool.pixi.feature.fixtures.tasks]
+make-fixtures = "tests/data/make_synthetic_fixtures.sh"
+
 # `prod` shares a solve group with `default`, so the container image (#7) gets byte-identical
 # pycairo, pysam and runtime versions to the ones the tests ran against, minus the dev tools.
 [tool.pixi.environments]
 default = { features = ["py313", "dev"], solve-group = "py313" }
 prod = { features = ["py313"], solve-group = "py313" }
+fixtures = { features = ["fixtures"], no-default-feature = true }
 
 [tool.pyright]
 include = ["src/mgm_muc1_vntr", "examples"]
