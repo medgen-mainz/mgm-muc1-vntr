@@ -125,3 +125,13 @@ release-please opens the release PR and cuts the tag. Do not hand-edit
 `CHANGELOG.md`, the manifest, or `version.py` to make a release.
 
 No em dashes in commit messages, PR titles, or issue titles.
+
+## Writing
+
+Commit messages, PR bodies and issue bodies are terse. Say what changed, the reasoning a
+reviewer cannot get from the diff, and the evidence. Cut everything else.
+
+- No headings that advertise importance, no preamble, no restating the diff in prose.
+- One line per point. If a point does not change what the reader does, delete it.
+- Evidence is a command and its output, not a description of how thorough you were.
+- Flag decisions that need a human, briefly. Do not narrate the ones that do not.
