@@ -8,7 +8,6 @@
     ".": {
       "package-name": "mgm_muc1_vntr",
       "release-type": "python",
-      "version-file": "src/mgm_muc1_vntr/version.py",
       "component": ""
     }
   }

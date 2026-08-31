@@ -25,7 +25,7 @@ dependencies = [
 description = "MUC1 VNTR analysis for short- and long-read sequencing data"
 keywords = []
 name = "mgm_muc1_vntr"
-version = "0.1.0"
+dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.13"
 
@@ -38,7 +38,7 @@ Issues = "https://github.com/medgen-mainz/mgm_muc1_vntr/issues"
 Source = "https://github.com/medgen-mainz/mgm_muc1_vntr"
 
 [tool.hatch.version]
-path = "mgm_muc1_vntr/version.py"
+path = "src/mgm_muc1_vntr/version.py"
 
 [dependency-groups]
 dev = [
