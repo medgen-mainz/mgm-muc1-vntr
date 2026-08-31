@@ -151,9 +151,10 @@ def run(
         if print_details:
             print_long_read_details(long_read_result)
 
-    elif long_read_bam or long_read_reference:
-        logger.warning("Long read analysis skipped: both BAM and reference files are required")
     elif not short_read_results:
+        # The validation above exits when exactly one of the two LRS options is given, so
+        # both are set or neither is, and an empty SRS result is the only remaining reason
+        # to skip. A branch blaming the options would never run.
         logger.warning("Long read analysis skipped: no short read results found")
 
     logger.info("All done. Have a nice day!")
