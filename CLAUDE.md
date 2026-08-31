@@ -85,9 +85,11 @@ MUC1 VNTR analysis for short-read and long-read sequencing data. A Typer CLI
 - `src/mgm_muc1_vntr/lrs_analysis.py` long-read analysis
 - `src/mgm_muc1_vntr/common.py` shared helpers
 - `src/mgm_muc1_vntr/version.py` the version literal, see below
-- `tests/` pytest suite; `tests/data/` holds BAM fixtures stored in Git LFS. Local
-  working BAMs are gitignored; a fixture that belongs to the suite is negated
-  explicitly in `tests/data/.gitignore`, so committing one is always deliberate
+- `tests/` pytest suite; `tests/data/` holds the fixtures, stored in Git LFS: a sliced
+  BAM plus one masked reference per genome build. Local working BAMs and uncompressed
+  references are gitignored; a fixture that belongs to the suite is negated explicitly
+  in `tests/data/.gitignore`, so committing one is always deliberate. Provenance and
+  regeneration recipes are in `tests/data/README.md`
 
 ## Development workflow
 
