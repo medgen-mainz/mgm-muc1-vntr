@@ -49,3 +49,48 @@ and gitignored; regenerate with `samtools faidx <file>`.
 To rebuild, take the region from a full reference for the matching build, then re-emit the
 contig with the region in place and `N` everywhere else, preserving the contig name and
 length. Verify by fetching the region back out and comparing it to the source reference.
+
+## `HG003_MUC1_{GRCh37,GRCh38}_ONT.bam`, `.bam.bai`
+
+Long reads for the **same donor** as the short-read fixture: HG003, also NA24149. From the
+GIAB `UCSC_Ultralong_OxfordNanopore_Promethion` release,
+`HG003_{GRCh37,GRCh38}_ONT-UL_UCSC_20200508.bam`. PromethION R9.4.1, basecalled with guppy
+3.2.5; the read groups are preserved, so the files identify themselves as `SM:HG003`.
+
+One per build, because they are the only fixtures that exercise the GRCh38 arm of
+`VNTR_INTERVALS` and `GRCh38_chr1_MUC1_masked.fa.gz` against real data.
+
+The sources are about 330 GB each, so slice them remotely against the published index
+rather than downloading. The regions are the MUC1 spans from the table above:
+
+```bash
+URL=https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/HG003_NA24149_father/UCSC_Ultralong_OxfordNanopore_Promethion
+curl -sO "$URL/HG003_GRCh37_ONT-UL_UCSC_20200508.bam.bai"
+samtools view -b -X -o gene_GRCh37.bam \
+  "$URL/HG003_GRCh37_ONT-UL_UCSC_20200508.bam" \
+  HG003_GRCh37_ONT-UL_UCSC_20200508.bam.bai "1:155158299-155162768"
+```
+
+That takes about 5 seconds per build and yields 5 to 6 MB. It is then **downsampled**,
+because the full gene slice is not suite-sized: `long_read_analysis` prints a whole
+pairwise alignment per read, and ultralong reads reach 156 kb, so a slice of 231 records
+takes 11 seconds and emits 17 MB on stdout.
+
+Downsampling keeps the 6 shortest reads that span the VNTR interval with the default 50 bp
+anchor on both sides, plus the 2 shortest that overlap without spanning, so both arms of
+the spanning test are real reads. Reads are ranked by `(length, name)`, which makes the
+output byte-reproducible. The script is `tests/data/make_ont_fixture.py`:
+
+```bash
+python tests/data/make_ont_fixture.py GRCh37 gene_GRCh37.bam HG003_MUC1_GRCh37_ONT.bam
+```
+
+| fixture | size | records | `long_read_analysis` |
+| --- | --- | --- | --- |
+| `HG003_MUC1_GRCh37_ONT.bam` | 33 KB | 8 | 0.05 s |
+| `HG003_MUC1_GRCh38_ONT.bam` | 69 KB | 8 | 0.11 s |
+
+Note the GRCh37 gene slice contains a secondary alignment with `SEQ=*`, for which
+`query_sequence` is `None` and the `assert read_sequence` in `long_read_analysis` fires. It
+lies outside the VNTR interval, so the fetch never reaches it, and the downsampling drops
+it along with every other record without a sequence.
