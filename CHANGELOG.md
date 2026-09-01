@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/medgen-mainz/mgm-muc1-vntr/compare/v0.2.0...v0.3.0) (2026-09-01)
+
+
+### Features
+
+* add --json-output for the machine-readable SRS result ([#49](https://github.com/medgen-mainz/mgm-muc1-vntr/issues/49)) ([24635fa](https://github.com/medgen-mainz/mgm-muc1-vntr/commit/24635faa6fd66ab67b5d61505a50b4a72a80f5e5))
+
 ## [0.2.0](https://github.com/medgen-mainz/mgm-muc1-vntr/compare/v0.1.0...v0.2.0) (2026-08-31)
 
 
