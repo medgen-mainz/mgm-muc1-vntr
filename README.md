@@ -202,7 +202,82 @@ supports the call.
 consensus is built, and groups with fewer reads than it are left out of the pileup entirely.
 
 `--pileup-svg-path pileup.svg` writes the same alignment to a file, which is easier to share
-and to scroll than a wide terminal. It is the only file the analysis writes.
+and to scroll than a wide terminal.
+
+### Machine-readable output
+
+`--json-output` writes the complete short-read result as one JSON document, for a program
+to ingest rather than a person to read. stdout is unchanged, so both can be produced in the
+same run.
+
+```
+uv run mgm-muc1-vntr run --quiet --json-output result.json \
+    --short-read-reference tests/data/GRCh37_1_MUC1_masked.fa.gz \
+    --short-read-bam tests/data/synth_insCCCC.bam
+```
+
+Truncated here; each result carries every flank group and each group every read:
+
+```json
+{
+  "schema_version": 1,
+  "tool_version": "0.2.0",
+  "genome_release": "GRCh37",
+  "input_bam": "tests/data/synth_insCCCC.bam",
+  "min_support_var": 3,
+  "min_support_consensus": 2,
+  "trim_flank": 150,
+  "locus_read_count": 2662,
+  "indel_read_count": 63,
+  "results": [
+    {
+      "var_type": "ins",
+      "sequence": "GGGG",
+      "sequence_transcript": "CCCC",
+      "length": 4,
+      "raw_support": 63,
+      "support": 63,
+      "flank_groups": [
+        {
+          "count": 63,
+          "consensus_left": "GGCTGGGGGGGCGG...",
+          "consensus_right": "GGGGGGGCGGTGGA...",
+          "longest_left": "GACACCGTGGGCTG...",
+          "longest_right": "GGGGGGGCGGTGGA...",
+          "example_read": "haplotype_1_11487_11991_0:0:0_0:0:0_e10",
+          "reads": [
+            { "read_name": "...", "left_flank": "ACACCGTGGGCT", "right_flank": "GGGG..." }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Four things about the shape are deliberate:
+
+- `schema_version` is an integer, bumped when a field is removed or changes meaning. Adding
+  a field does not bump it, so gate on equality and ignore fields you do not know.
+- `locus_read_count` is every read over the VNTR interval and `indel_read_count` the subset
+  carrying an indel of at least 2 bp, which is all the analysis looks at. Without them an
+  empty `results` means either a clean locus or no coverage. `locus_read_count >=
+  indel_read_count >= sum(raw_support)`; the last step is not equality because variations
+  below `--min-support-var` are dropped from `results` but still counted.
+- `flank_groups` is nested inside its result rather than being a flat list with a positional
+  key. `results` is sorted by `support` descending, so a position would re-attach evidence
+  to the wrong variant if that order ever changed. Key on `(var_type, sequence)`, which is
+  unique per result by construction, if you need it flat.
+- Every group is emitted, including those below `--min-support-consensus`. That threshold is
+  a display choice for the pileup; it is in the document for a consumer to apply itself.
+
+`sequence` is in the orientation the analysis produced, `sequence_transcript` the reverse
+complement the CSV row prints, and `length` is the same either way. No frameshift flag and
+no verdict: the consumer decides what counts as positive.
+
+The document is a superset of `--print-pileups`, which pads by the longest flank in the group
+and orders reads by descending left-flank length, so the terminal view can be rebuilt from
+the JSON. The reverse does not hold.
 
 ## Running on your own data
 
@@ -233,6 +308,7 @@ uv run mgm-muc1-vntr run \
 | `--print-pileups` | off | print the reads behind each call |
 | `--print-details` | off | print LRS read names |
 | `--pileup-svg-path` | none | write the pileup as SVG |
+| `--json-output` | none | write the full SRS result as JSON |
 | `-v`, `--verbose` | 0 | repeat for more detail |
 | `-q`, `--quiet` | off | warnings and errors only |
 

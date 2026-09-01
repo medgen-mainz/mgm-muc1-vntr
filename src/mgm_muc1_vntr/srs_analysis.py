@@ -174,6 +174,51 @@ def build_right_consensus(config: Config, right_flanks: list[str]) -> str:
     return "".join(consensus)
 
 
+def has_indel_geq_2(line: pysam.AlignedSegment) -> bool:
+    """Whether ``line`` carries an insertion or deletion of at least two bases.
+
+    Shared with :func:`count_locus_reads` so the ``indel_read_count`` it reports cannot
+    drift from the reads the analysis actually looks at.
+    """
+    return any(operation in (pysam.CINS, pysam.CDEL) and length >= 2 for operation, length in line.cigartuples or [])
+
+
+class LocusReadCounts(pydantic.BaseModel):
+    """How many reads the locus holds, before and after the indel filter."""
+
+    model_config = pydantic.ConfigDict(frozen=True)
+
+    #: Reads fetched over the VNTR interval.
+    locus_read_count: int
+    #: Of those, the ones that carry an indel of at least two bases.
+    indel_read_count: int
+
+
+def count_locus_reads(*, config: Config) -> LocusReadCounts:
+    """Count the reads over the VNTR interval, in total and after the indel filter.
+
+    Tells "no variation" apart from "no coverage", which the result list alone cannot:
+    an empty list means either.
+
+    This is a second pass over the interval rather than a by-product of
+    :func:`short_read_analysis`, which keeps that function's return type and its callers
+    as they are. The interval is a few kilobases and the pass only runs when the JSON
+    output asks for the numbers.
+    """
+    interval = VNTR_INTERVALS[config.genome_release]
+    logger.debug("Counting reads over {itv}", itv=interval)
+    locus_read_count = 0
+    indel_read_count = 0
+    with pysam.AlignmentFile(
+        str(config.input_bam), mode="rb", reference_filename=str(config.reference_genome)
+    ) as bamfile:
+        for line in bamfile.fetch(contig=interval.contig, start=interval.start, end=interval.end):
+            locus_read_count += 1
+            if has_indel_geq_2(line):
+                indel_read_count += 1
+    return LocusReadCounts(locus_read_count=locus_read_count, indel_read_count=indel_read_count)
+
+
 def short_read_analysis(
     *,
     config: Config,
@@ -200,15 +245,9 @@ def short_read_analysis(
         logger.debug("Fetching reads from {itv}", itv=interval)
         for line in bamfile.fetch(contig=interval.contig, start=interval.start, end=interval.end):
             # Skip all but those having indel >= 2
-            is_indel_geq_2 = False
-            for operation, length in line.cigartuples or []:
-                if operation in (pysam.CINS, pysam.CDEL) and length >= 2:
-                    is_indel_geq_2 = True
-                    break
-            else:
+            if not has_indel_geq_2(line):
                 logger.trace("Skipping read {read} without indel >=2", read=line.query_name or "")
-                continue  # skip
-            assert is_indel_geq_2, "otherwise, skipped above"
+                continue
             ref_seq = line.get_reference_sequence()
             qry_seq = line.query_sequence
             assert qry_seq is not None, "query sequence must be present"

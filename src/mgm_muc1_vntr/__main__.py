@@ -17,11 +17,13 @@ from mgm_muc1_vntr.lrs_analysis import (
 )
 from mgm_muc1_vntr.srs_analysis import Config as SrsConfig
 from mgm_muc1_vntr.srs_analysis import (
+    count_locus_reads,
     print_short_read_pileups,
     print_short_read_result,
     print_short_read_result_header,
     short_read_analysis,
 )
+from mgm_muc1_vntr.srs_json import build_json_document, write_json_document
 
 
 def setup_loguru(verbose: int = 0):
@@ -84,6 +86,9 @@ def run(
     pileup_svg_path: Annotated[
         pathlib.Path | None, typer.Option(help="Path to write pileup visualization as SVG file")
     ] = None,
+    json_output: Annotated[
+        pathlib.Path | None, typer.Option(help="Path to write the short-read result as a JSON document")
+    ] = None,
 ) -> None:
     """Run SRS (and optional LRS) analysis."""
     setup_loguru(verbose=-1 if quiet else verbose)
@@ -100,17 +105,16 @@ def run(
         raise typer.Exit(1)
 
     # Run short read analysis
-    short_read_results = short_read_analysis(
-        config=SrsConfig(
-            input_bam=short_read_bam,
-            genome_release=short_read_release,
-            reference_genome=short_read_reference,
-            min_support_var=min_support_var,
-            min_support_consensus=min_support_consensus,
-            trim_flank=short_read_analysis_trim_flank,
-            pileup_svg_path=pileup_svg_path,
-        )
+    srs_config = SrsConfig(
+        input_bam=short_read_bam,
+        genome_release=short_read_release,
+        reference_genome=short_read_reference,
+        min_support_var=min_support_var,
+        min_support_consensus=min_support_consensus,
+        trim_flank=short_read_analysis_trim_flank,
+        pileup_svg_path=pileup_svg_path,
     )
+    short_read_results = short_read_analysis(config=srs_config)
 
     # Output short read results
     for no, short_read_result in enumerate(short_read_results):
@@ -119,6 +123,18 @@ def run(
         print_short_read_result(short_read_result=short_read_result)
         if print_pileups:
             print_short_read_pileups(short_read_result=short_read_result, min_support_consensus=min_support_consensus)
+
+    # Write the machine-readable result, which is a superset of the output above.
+    if json_output:
+        logger.info("Writing JSON result to {path}", path=json_output)
+        write_json_document(
+            document=build_json_document(
+                config=srs_config,
+                short_read_results=short_read_results,
+                locus_read_counts=count_locus_reads(config=srs_config),
+            ),
+            output_path=json_output,
+        )
 
     # Run long read analysis if parameters provided
     if long_read_bam and long_read_reference and short_read_results:

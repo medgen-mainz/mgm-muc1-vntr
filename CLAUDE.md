@@ -82,6 +82,8 @@ MUC1 VNTR analysis for short-read and long-read sequencing data. A Typer CLI
 
 - `src/mgm_muc1_vntr/__main__.py` CLI entry point and logging setup
 - `src/mgm_muc1_vntr/srs_analysis.py` short-read analysis, including pileup SVG output
+- `src/mgm_muc1_vntr/srs_json.py` the `--json-output` document, the versioned contract
+  downstream consumers parse
 - `src/mgm_muc1_vntr/lrs_analysis.py` long-read analysis
 - `src/mgm_muc1_vntr/common.py` shared helpers
 - `src/mgm_muc1_vntr/version.py` the version literal, see below
